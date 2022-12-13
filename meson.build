@@ -62,6 +62,11 @@ test_env = [
     'NETPLAN_GENERATE_PATH=' + join_paths(meson.current_build_dir(), 'src', 'generate'),
     'NETPLAN_DBUS_CMD=' + join_paths(meson.current_build_dir(), 'dbus', 'netplan-dbus'),
 ]
+
+if get_option('unit_testing')
+  subdir('tests/ctests')
+endif
+
 #FIXME: exclude doc/env/
 test('linting',
      pyflakes,
