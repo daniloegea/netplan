@@ -224,7 +224,7 @@ struct netplan_net_definition {
         gboolean ipv6;
     } linklocal;
 
-    /* master ID for slave devices */
+    /* main interface ID for member devices */
     char* bridge;
     char* bond;
 
