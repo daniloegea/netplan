@@ -1,0 +1,2 @@
+# clang-format thinks it's objective-c :(
+src/names.h

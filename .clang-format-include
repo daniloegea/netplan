@@ -1,0 +1,5 @@
+src/*.c
+src/*.h
+include/*.h
+tests/ctests/*.c
+tests/ctests/*.h
