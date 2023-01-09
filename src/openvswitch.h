@@ -19,13 +19,7 @@
 
 #include "netplan.h"
 
-NETPLAN_INTERNAL gboolean
-netplan_netdef_write_ovs(
-        const NetplanState* np_state,
-        const NetplanNetDefinition* netdef,
-        const char* rootdir,
-        gboolean* has_been_written,
-        GError** error);
+NETPLAN_INTERNAL gboolean netplan_netdef_write_ovs(const NetplanState* np_state, const NetplanNetDefinition* netdef,
+                                                   const char* rootdir, gboolean* has_been_written, GError** error);
 
-NETPLAN_INTERNAL gboolean
-netplan_ovs_cleanup(const char* rootdir);
+NETPLAN_INTERNAL gboolean netplan_ovs_cleanup(const char* rootdir);

@@ -32,7 +32,7 @@
  ****************************************************/
 
 static void
-write_error_marker(GString *message, int column)
+write_error_marker(GString* message, int column)
 {
     int i;
 
@@ -42,19 +42,19 @@ write_error_marker(GString *message, int column)
     g_string_append_printf(message, "^");
 }
 
-static char *
-get_syntax_error_context(const NetplanParser* npp, const int line_num, const int column, GError **error)
+static char*
+get_syntax_error_context(const NetplanParser* npp, const int line_num, const int column, GError** error)
 {
-    GString *message = NULL;
-    GFile *cur_file = g_file_new_for_path(npp->current.filepath);
-    GFileInputStream *file_stream;
-    GDataInputStream *stream;
+    GString* message = NULL;
+    GFile* cur_file  = g_file_new_for_path(npp->current.filepath);
+    GFileInputStream* file_stream;
+    GDataInputStream* stream;
     gsize len;
     gchar* line = NULL;
 
-    message = g_string_sized_new(200);
+    message     = g_string_sized_new(200);
     file_stream = g_file_read(cur_file, NULL, error);
-    stream = g_data_input_stream_new (G_INPUT_STREAM(file_stream));
+    stream      = g_data_input_stream_new(G_INPUT_STREAM(file_stream));
     g_object_unref(file_stream);
 
     for (int i = 0; i < line_num + 1; i++) {
@@ -72,11 +72,11 @@ get_syntax_error_context(const NetplanParser* npp, const int line_num, const int
     return g_string_free(message, FALSE);
 }
 
-static char *
-get_parser_error_context(const yaml_parser_t *parser, GError **error)
+static char*
+get_parser_error_context(const yaml_parser_t* parser, GError** error)
 {
-    GString *message = NULL;
-    unsigned char* line = parser->buffer.pointer;
+    GString* message       = NULL;
+    unsigned char* line    = parser->buffer.pointer;
     unsigned char* current = line;
 
     message = g_string_sized_new(200);
@@ -109,38 +109,24 @@ get_parser_error_context(const yaml_parser_t *parser, GError **error)
 gboolean
 parser_error(const yaml_parser_t* parser, const char* yaml, GError** error)
 {
-    char *error_context = get_parser_error_context(parser, error);
-    yaml = yaml ? yaml : "(unnamed file)";
-    if ((char)*parser->buffer.pointer == '\t')
+    char* error_context = get_parser_error_context(parser, error);
+    yaml                = yaml ? yaml : "(unnamed file)";
+    if ((char) *parser->buffer.pointer == '\t')
         g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE,
-                    "%s:%zu:%zu: Invalid YAML: tabs are not allowed for indent:\n%s",
-                    yaml,
-                    parser->problem_mark.line + 1,
-                    parser->problem_mark.column + 1,
-                    error_context);
-    else if (((char)*parser->buffer.pointer == ' ' || (char)*parser->buffer.pointer == '\0')
+                    "%s:%zu:%zu: Invalid YAML: tabs are not allowed for indent:\n%s", yaml,
+                    parser->problem_mark.line + 1, parser->problem_mark.column + 1, error_context);
+    else if (((char) *parser->buffer.pointer == ' ' || (char) *parser->buffer.pointer == '\0')
              && !parser->token_available)
         g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE,
-                    "%s:%zu:%zu: Invalid YAML: aliases are not supported:\n%s",
-                    yaml,
-                    parser->problem_mark.line + 1,
-                    parser->problem_mark.column + 1,
-                    error_context);
+                    "%s:%zu:%zu: Invalid YAML: aliases are not supported:\n%s", yaml, parser->problem_mark.line + 1,
+                    parser->problem_mark.column + 1, error_context);
     else if (parser->state == YAML_PARSE_BLOCK_MAPPING_KEY_STATE)
         g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE,
-                    "%s:%zu:%zu: Invalid YAML: inconsistent indentation:\n%s",
-                    yaml,
-                    parser->problem_mark.line + 1,
-                    parser->problem_mark.column + 1,
-                    error_context);
+                    "%s:%zu:%zu: Invalid YAML: inconsistent indentation:\n%s", yaml, parser->problem_mark.line + 1,
+                    parser->problem_mark.column + 1, error_context);
     else {
-        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE,
-                    "%s:%zu:%zu: Invalid YAML: %s:\n%s",
-                    yaml,
-                    parser->problem_mark.line + 1,
-                    parser->problem_mark.column + 1,
-                    parser->problem,
-                    error_context);
+        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE, "%s:%zu:%zu: Invalid YAML: %s:\n%s", yaml,
+                    parser->problem_mark.line + 1, parser->problem_mark.column + 1, parser->problem, error_context);
     }
     g_free(error_context);
 
@@ -151,7 +137,7 @@ parser_error(const yaml_parser_t* parser, const char* yaml, GError** error)
  * Put a YAML specific error message for @node into @error.
  */
 gboolean
-yaml_error(const NetplanParser *npp, const yaml_node_t* node, GError** error, const char* msg, ...)
+yaml_error(const NetplanParser* npp, const yaml_node_t* node, GError** error, const char* msg, ...)
 {
     va_list argp;
     char* s;
@@ -161,16 +147,10 @@ yaml_error(const NetplanParser *npp, const yaml_node_t* node, GError** error, co
     g_vasprintf(&s, msg, argp);
     if (node != NULL) {
         error_context = get_syntax_error_context(npp, node->start_mark.line, node->start_mark.column, error);
-        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE,
-                    "%s:%zu:%zu: Error in network definition: %s\n%s",
-                    npp->current.filepath,
-                    node->start_mark.line + 1,
-                    node->start_mark.column + 1,
-                    s,
-                    error_context);
+        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE, "%s:%zu:%zu: Error in network definition: %s\n%s",
+                    npp->current.filepath, node->start_mark.line + 1, node->start_mark.column + 1, s, error_context);
     } else {
-        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE,
-                    "Error in network definition: %s", s);
+        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_PARSE, "Error in network definition: %s", s);
     }
     g_free(s);
     va_end(argp);
@@ -191,7 +171,8 @@ netplan_error_message(NetplanError* error, char* buf, size_t buf_size)
 }
 
 uint64_t
-netplan_error_code(NetplanError* error) {
-    uint64_t error_code = (uint64_t)error->domain << 32 | (uint64_t)error->code;
+netplan_error_code(NetplanError* error)
+{
+    uint64_t error_code = (uint64_t) error->domain << 32 | (uint64_t) error->code;
     return error_code;
 }

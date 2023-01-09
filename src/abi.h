@@ -22,14 +22,15 @@
 
 typedef int NetplanFlags;
 
-/* Those types are part of our ABI as they have been exposed in older versions */
+/* Those types are part of our ABI as they have been exposed in older versions
+ */
 
 typedef enum {
-    NETPLAN_OPTIONAL_IPV4_LL = 1<<0,
-    NETPLAN_OPTIONAL_IPV6_RA = 1<<1,
-    NETPLAN_OPTIONAL_DHCP4   = 1<<2,
-    NETPLAN_OPTIONAL_DHCP6   = 1<<3,
-    NETPLAN_OPTIONAL_STATIC  = 1<<4,
+    NETPLAN_OPTIONAL_IPV4_LL = 1 << 0,
+    NETPLAN_OPTIONAL_IPV6_RA = 1 << 1,
+    NETPLAN_OPTIONAL_DHCP4   = 1 << 2,
+    NETPLAN_OPTIONAL_DHCP6   = 1 << 3,
+    NETPLAN_OPTIONAL_STATIC  = 1 << 4,
 } NetplanOptionalAddressFlag;
 
 /* Fields below are valid for dhcp4 and dhcp6 unless otherwise noted. */
@@ -60,15 +61,15 @@ typedef enum {
 } NetplanInfinibandMode;
 
 typedef enum {
-    NETPLAN_WIFI_WOWLAN_DEFAULT           = 1<<0,
-    NETPLAN_WIFI_WOWLAN_ANY               = 1<<1,
-    NETPLAN_WIFI_WOWLAN_DISCONNECT        = 1<<2,
-    NETPLAN_WIFI_WOWLAN_MAGIC             = 1<<3,
-    NETPLAN_WIFI_WOWLAN_GTK_REKEY_FAILURE = 1<<4,
-    NETPLAN_WIFI_WOWLAN_EAP_IDENTITY_REQ  = 1<<5,
-    NETPLAN_WIFI_WOWLAN_4WAY_HANDSHAKE    = 1<<6,
-    NETPLAN_WIFI_WOWLAN_RFKILL_RELEASE    = 1<<7,
-    NETPLAN_WIFI_WOWLAN_TCP               = 1<<8,
+    NETPLAN_WIFI_WOWLAN_DEFAULT           = 1 << 0,
+    NETPLAN_WIFI_WOWLAN_ANY               = 1 << 1,
+    NETPLAN_WIFI_WOWLAN_DISCONNECT        = 1 << 2,
+    NETPLAN_WIFI_WOWLAN_MAGIC             = 1 << 3,
+    NETPLAN_WIFI_WOWLAN_GTK_REKEY_FAILURE = 1 << 4,
+    NETPLAN_WIFI_WOWLAN_EAP_IDENTITY_REQ  = 1 << 5,
+    NETPLAN_WIFI_WOWLAN_4WAY_HANDSHAKE    = 1 << 6,
+    NETPLAN_WIFI_WOWLAN_RFKILL_RELEASE    = 1 << 7,
+    NETPLAN_WIFI_WOWLAN_TCP               = 1 << 8,
 } NetplanWifiWowlanFlag;
 
 struct NetplanWifiWowlanType {
@@ -81,22 +82,22 @@ struct NetplanWifiWowlanType {
  *       are the same thing.
  */
 typedef enum {
-    NETPLAN_TUNNEL_MODE_UNKNOWN     = 0,
-    NETPLAN_TUNNEL_MODE_IPIP        = 1,
-    NETPLAN_TUNNEL_MODE_GRE         = 2,
-    NETPLAN_TUNNEL_MODE_SIT         = 3,
-    NETPLAN_TUNNEL_MODE_ISATAP      = 4,  // NM only.
-    NETPLAN_TUNNEL_MODE_VTI         = 5,
-    NETPLAN_TUNNEL_MODE_IP6IP6      = 6,
-    NETPLAN_TUNNEL_MODE_IPIP6       = 7,
-    NETPLAN_TUNNEL_MODE_IP6GRE      = 8,
-    NETPLAN_TUNNEL_MODE_VTI6        = 9,
-    NETPLAN_TUNNEL_MODE_VXLAN       = 10,
+    NETPLAN_TUNNEL_MODE_UNKNOWN = 0,
+    NETPLAN_TUNNEL_MODE_IPIP    = 1,
+    NETPLAN_TUNNEL_MODE_GRE     = 2,
+    NETPLAN_TUNNEL_MODE_SIT     = 3,
+    NETPLAN_TUNNEL_MODE_ISATAP  = 4, // NM only.
+    NETPLAN_TUNNEL_MODE_VTI     = 5,
+    NETPLAN_TUNNEL_MODE_IP6IP6  = 6,
+    NETPLAN_TUNNEL_MODE_IPIP6   = 7,
+    NETPLAN_TUNNEL_MODE_IP6GRE  = 8,
+    NETPLAN_TUNNEL_MODE_VTI6    = 9,
+    NETPLAN_TUNNEL_MODE_VXLAN   = 10,
 
     /* systemd-only, apparently? */
-    NETPLAN_TUNNEL_MODE_GRETAP      = 101,
-    NETPLAN_TUNNEL_MODE_IP6GRETAP   = 102,
-    NETPLAN_TUNNEL_MODE_WIREGUARD   = 103,
+    NETPLAN_TUNNEL_MODE_GRETAP    = 101,
+    NETPLAN_TUNNEL_MODE_IP6GRETAP = 102,
+    NETPLAN_TUNNEL_MODE_WIREGUARD = 103,
 
     NETPLAN_TUNNEL_MODE_MAX_,
 } NetplanTunnelMode;
@@ -127,7 +128,7 @@ typedef struct authentication_settings {
     char* client_certificate;
     char* client_key;
     char* client_key_password;
-    char* phase2_auth;  /* netplan-feature: auth-phase2 */
+    char* phase2_auth; /* netplan-feature: auth-phase2 */
 } NetplanAuthenticationSettings;
 
 typedef struct ovs_controller {
@@ -149,19 +150,18 @@ typedef struct ovs_settings {
 
 typedef union {
     struct NetplanNMSettings {
-        char *name;
-        char *uuid;
-        char *stable_id;
-        char *device;
+        char* name;
+        char* uuid;
+        char* stable_id;
+        char* device;
         GData* passthrough; /* See g_datalist* functions */
     } nm;
     struct NetplanNetworkdSettings {
-        char *unit;
+        char* unit;
     } networkd;
 } NetplanBackendSettings;
 
-typedef enum
-{
+typedef enum {
     /**
      * @brief Tristate enum type
      *
@@ -229,7 +229,7 @@ struct netplan_net_definition {
     char* bond;   // deprecated, use bond_link instead
 
     /* peer ID for OVS patch ports */
-    char* peer;   // deprecated, use peer_link instead
+    char* peer; // deprecated, use peer_link instead
 
     /* vlan */
     guint vlan_id;
@@ -245,7 +245,8 @@ struct netplan_net_definition {
     /* netplan-feature: ipv6-mtu */
     guint ipv6_mtubytes;
 
-    /* these properties are only valid for physical interfaces (type < ND_VIRTUAL) */
+    /* these properties are only valid for physical interfaces (type <
+     * ND_VIRTUAL) */
     char* set_name;
     struct {
         /* A glob (or tab-separated list of globs) to match a specific driver */
@@ -313,11 +314,11 @@ struct netplan_net_definition {
 
     struct {
         NetplanTunnelMode mode;
-        char *local_ip;
-        char *remote_ip;
-        char *input_key;
-        char *output_key;
-        char *private_key; /* used for wireguard */
+        char* local_ip;
+        char* remote_ip;
+        char* input_key;
+        char* output_key;
+        char* private_key; /* used for wireguard */
         guint fwmark;
         guint port;
     } tunnel;
@@ -338,7 +339,8 @@ struct netplan_net_definition {
     NetplanBackendSettings backend_settings;
 
     char* filepath;
-    /* it cannot be in the tunnel struct: https://github.com/canonical/netplan/pull/206 */
+    /* it cannot be in the tunnel struct:
+     * https://github.com/canonical/netplan/pull/206 */
     guint tunnel_ttl;
 
     /* netplan-feature: activation-mode */

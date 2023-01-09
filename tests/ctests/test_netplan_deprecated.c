@@ -32,31 +32,32 @@ netplan_parser_load_keyfile(NetplanParser* npp, const char* filename, NetplanErr
 #include "test_utils.h"
 
 void
-test_netplan_get_id_from_nm_filename_no_ssid(void **state)
+test_netplan_get_id_from_nm_filename_no_ssid(void** state)
 {
-    const char* filename = "/some/rootdir/run/NetworkManager/system-connections/netplan-some-id.nmconnection";
-    char* id = netplan_get_id_from_nm_filename(filename, NULL);
+    const char* filename = "/some/rootdir/run/NetworkManager/"
+                           "system-connections/netplan-some-id.nmconnection";
+    char* id             = netplan_get_id_from_nm_filename(filename, NULL);
     assert_string_equal(id, "some-id");
     g_free(id);
 }
 
 void
-test_netplan_get_id_from_nm_filename_with_ssid(void **state)
+test_netplan_get_id_from_nm_filename_with_ssid(void** state)
 {
-    const char* filename = "/some/rootdir/run/NetworkManager/system-connections/netplan-some-id-SOME-SSID.nmconnection";
-    char* id = netplan_get_id_from_nm_filename(filename, "SOME-SSID");
+    const char* filename = "/some/rootdir/run/NetworkManager/system-connections/"
+                           "netplan-some-id-SOME-SSID.nmconnection";
+    char* id             = netplan_get_id_from_nm_filename(filename, "SOME-SSID");
     assert_string_equal(id, "some-id");
     g_free(id);
 }
 
 void
-test_netplan_get_id_from_nm_filename_filename_is_malformed(void **state)
+test_netplan_get_id_from_nm_filename_filename_is_malformed(void** state)
 {
     const char* filename = "INVALID/netplan-some-id.nmconnection";
-    char* id = netplan_get_id_from_nm_filename(filename, NULL);
+    char* id             = netplan_get_id_from_nm_filename(filename, NULL);
     assert_null(id);
 }
-
 
 int
 setup(void** state)
@@ -74,12 +75,11 @@ int
 main()
 {
 
-       const struct CMUnitTest tests[] = {
-           cmocka_unit_test(test_netplan_get_id_from_nm_filename_no_ssid),
-           cmocka_unit_test(test_netplan_get_id_from_nm_filename_with_ssid),
-           cmocka_unit_test(test_netplan_get_id_from_nm_filename_filename_is_malformed),
-       };
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_netplan_get_id_from_nm_filename_no_ssid),
+        cmocka_unit_test(test_netplan_get_id_from_nm_filename_with_ssid),
+        cmocka_unit_test(test_netplan_get_id_from_nm_filename_filename_is_malformed),
+    };
 
-       return cmocka_run_group_tests(tests, setup, tear_down);
-
+    return cmocka_run_group_tests(tests, setup, tear_down);
 }

@@ -20,10 +20,8 @@
 
 #define NETPLAN_NM_EMPTY_GROUP "_"
 
-NETPLAN_PUBLIC gboolean
-netplan_parser_load_keyfile(NetplanParser* npp, const char* filename, NetplanError** error);
+NETPLAN_PUBLIC gboolean netplan_parser_load_keyfile(NetplanParser* npp, const char* filename, NetplanError** error);
 
 /********** Old API below this ***********/
 
-NETPLAN_PUBLIC gboolean
-netplan_parse_keyfile(const char* filename, GError** error);
+NETPLAN_PUBLIC gboolean netplan_parse_keyfile(const char* filename, GError** error);

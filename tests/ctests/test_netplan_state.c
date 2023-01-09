@@ -52,7 +52,7 @@ test_netplan_state_iterator(void** state)
 void
 test_netplan_state_iterator_empty(void** state)
 {
-    NetplanStateIterator iter = { 0 };
+    NetplanStateIterator iter    = {0};
     NetplanNetDefinition* netdef = NULL;
 
     netdef = netplan_state_iterator_next(&iter);
@@ -62,7 +62,7 @@ test_netplan_state_iterator_empty(void** state)
 void
 test_netplan_state_iterator_null(void** state)
 {
-    NetplanStateIterator *iter = NULL;
+    NetplanStateIterator* iter   = NULL;
     NetplanNetDefinition* netdef = NULL;
 
     netdef = netplan_state_iterator_next(iter);
@@ -74,7 +74,6 @@ test_netplan_state_iterator_null_has_next(void** state)
 {
     assert_false(netplan_state_iterator_has_next(NULL));
 }
-
 
 int
 setup(void** state)
@@ -101,5 +100,4 @@ main()
     };
 
     return cmocka_run_group_tests(tests, setup, tear_down);
-
 }

@@ -17,8 +17,8 @@
 
 /*
  * The whole point of this file is to export the former ABI as simple wrappers
- * around the newer API. Most functions should thus be relatively short, the meat
- * of things being in the newer API implementation.
+ * around the newer API. Most functions should thus be relatively short, the
+ * meat of things being in the newer API implementation.
  */
 
 #include "netplan.h"
@@ -48,17 +48,17 @@
 /* The +8 is to prevent the compiler removing the array if the array is empty,
  * i.e. the data member is the first in the struct definition.
  */
-__attribute__((used)) __attribute__((section("netdefs_offset")))
-char _netdefs_off[8+offsetof(struct netplan_state, netdefs)] = {};
+__attribute__((used))
+__attribute__((section("netdefs_offset"))) char _netdefs_off[8 + offsetof(struct netplan_state, netdefs)] = {};
 
-__attribute__((used)) __attribute__((section("netdefs_ordered_offset")))
-char _netdefs_ordered_off[8+offsetof(struct netplan_state, netdefs_ordered)] = {};
+__attribute__((used)) __attribute__((section(
+    "netdefs_ordered_offset"))) char _netdefs_ordered_off[8 + offsetof(struct netplan_state, netdefs_ordered)] = {};
 
-__attribute__((used)) __attribute__((section("ovs_settings_offset")))
-char _ovs_settings_global_off[8+offsetof(struct netplan_state, ovs_settings)] = {};
+__attribute__((used)) __attribute__((section(
+    "ovs_settings_offset"))) char _ovs_settings_global_off[8 + offsetof(struct netplan_state, ovs_settings)] = {};
 
-__attribute__((used)) __attribute__((section("global_backend_offset")))
-char _global_backend_off[8+offsetof(struct netplan_state, backend)] = {};
+__attribute__((used)) __attribute__((
+    section("global_backend_offset"))) char _global_backend_off[8 + offsetof(struct netplan_state, backend)] = {};
 
 NETPLAN_ABI
 NetplanState global_state = {};
@@ -94,7 +94,7 @@ netplan_parse_yaml(const char* filename, GError** error)
 /**
  * Post-processing after parsing all config files
  */
-GHashTable *
+GHashTable*
 netplan_finish_parse(GError** error)
 {
     if (netplan_state_import_parser_results(&global_state, &global_parser, error))
@@ -123,12 +123,11 @@ write_netplan_conf(const NetplanNetDefinition* def, const char* rootdir)
 NETPLAN_ABI void
 write_netplan_conf_full(const char* file_hint, const char* rootdir)
 {
-    g_autofree gchar *path = NULL;
+    g_autofree gchar* path = NULL;
     netplan_finish_parse(NULL);
-    if (!netplan_state_has_nondefault_globals(&global_state) &&
-        !netplan_state_get_netdefs_size(&global_state))
+    if (!netplan_state_has_nondefault_globals(&global_state) && !netplan_state_get_netdefs_size(&global_state))
         return;
-    path = g_build_path(G_DIR_SEPARATOR_S, rootdir ?: G_DIR_SEPARATOR_S, "etc", "netplan", file_hint, NULL);
+    path   = g_build_path(G_DIR_SEPARATOR_S, rootdir ?: G_DIR_SEPARATOR_S, "etc", "netplan", file_hint, NULL);
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     netplan_state_dump_yaml(&global_state, fd, NULL);
     close(fd);
@@ -141,7 +140,8 @@ netplan_parse_keyfile(const char* filename, GError** error)
 }
 
 // LCOV_EXCL_START
-void process_input_file(const char *f)
+void
+process_input_file(const char* f)
 {
     GError* error = NULL;
 
@@ -170,14 +170,15 @@ process_yaml_hierarchy(const char* rootdir)
 NETPLAN_INTERNAL void
 _write_netplan_conf(const char* netdef_id, const char* rootdir)
 {
-    GHashTable* ht = NULL;
+    GHashTable* ht                  = NULL;
     const NetplanNetDefinition* def = NULL;
-    ht = netplan_finish_parse(NULL);
-    def = g_hash_table_lookup(ht, netdef_id);
+    ht                              = netplan_finish_parse(NULL);
+    def                             = g_hash_table_lookup(ht, netdef_id);
     if (def)
         write_netplan_conf(def, rootdir);
     else
-        g_warning("_write_netplan_conf: netdef_id (%s) not found.", netdef_id); // LCOV_EXCL_LINE
+        g_warning("_write_netplan_conf: netdef_id (%s) not found.",
+                  netdef_id); // LCOV_EXCL_LINE
 }
 
 // LCOV_EXCL_START
@@ -189,13 +190,13 @@ _write_netplan_conf(const char* netdef_id, const char* rootdir)
 gchar*
 netplan_get_filename_by_id(const char* netdef_id, const char* rootdir)
 {
-    NetplanParser* npp = netplan_parser_new();
+    NetplanParser* npp     = netplan_parser_new();
     NetplanState* np_state = netplan_state_new();
-    char *filepath = NULL;
-    GError* error = NULL;
+    char* filepath         = NULL;
+    GError* error          = NULL;
 
-    if (!netplan_parser_load_yaml_hierarchy(npp, rootdir, &error) ||
-            !netplan_state_import_parser_results(np_state, npp, &error)) {
+    if (!netplan_parser_load_yaml_hierarchy(npp, rootdir, &error)
+        || !netplan_state_import_parser_results(np_state, npp, &error)) {
         g_fprintf(stderr, "%s\n", error->message);
         return NULL;
     }
@@ -208,11 +209,11 @@ netplan_get_filename_by_id(const char* netdef_id, const char* rootdir)
     return filepath;
 }
 
-NETPLAN_INTERNAL struct netdef_pertype_iter*
-_netplan_state_new_netdef_pertype_iter(NetplanState* np_state, const char* devtype);
+NETPLAN_INTERNAL struct netdef_pertype_iter* _netplan_state_new_netdef_pertype_iter(NetplanState* np_state,
+                                                                                    const char* devtype);
 
 NETPLAN_INTERNAL struct netdef_pertype_iter*
-_netplan_iter_defs_per_devtype_init(const char *devtype)
+_netplan_iter_defs_per_devtype_init(const char* devtype)
 {
     return _netplan_state_new_netdef_pertype_iter(&global_state, devtype);
 }
@@ -223,7 +224,7 @@ _netplan_netdef_id(NetplanNetDefinition* netdef)
     return netdef->id;
 }
 
-NETPLAN_ABI const char *
+NETPLAN_ABI const char*
 netplan_netdef_get_filename(const NetplanNetDefinition* netdef)
 {
     g_assert(netdef);
@@ -241,20 +242,20 @@ netplan_netdef_get_embedded_switch_mode(const NetplanNetDefinition* netdef)
 }
 
 /**
- * Extract the netplan netdef ID from a NetworkManager connection profile (keyfile),
- * generated by netplan. Used by the NetworkManager YAML backend.
+ * Extract the netplan netdef ID from a NetworkManager connection profile
+ * (keyfile), generated by netplan. Used by the NetworkManager YAML backend.
  *
  * Note: Use netplan_get_id_from_nm_filepath instead.
  */
 gchar*
 netplan_get_id_from_nm_filename(const char* filename, const char* ssid)
 {
-    size_t out_buf_size = 0;
-    ssize_t ret = 0;
+    size_t out_buf_size         = 0;
+    ssize_t ret                 = 0;
     g_autofree char* out_buffer = NULL;
 
     out_buf_size = strlen(filename);
-    out_buffer = calloc(out_buf_size, 1);
+    out_buffer   = calloc(out_buf_size, 1);
 
     ret = netplan_get_id_from_nm_filepath(filename, ssid, out_buffer, out_buf_size);
 

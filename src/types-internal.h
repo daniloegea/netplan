@@ -40,21 +40,21 @@ struct NetplanOptionalAddressType {
 };
 
 typedef enum {
-    NETPLAN_VXLAN_NOTIFICATION_L2_MISS = 1<<0,
-    NETPLAN_VXLAN_NOTIFICATION_L3_MISS = 1<<1,
+    NETPLAN_VXLAN_NOTIFICATION_L2_MISS = 1 << 0,
+    NETPLAN_VXLAN_NOTIFICATION_L3_MISS = 1 << 1,
 } NetplanVxlanNotificationFlags;
 
 typedef enum {
-    NETPLAN_VXLAN_CHECKSUM_UDP = 1<<0,
-    NETPLAN_VXLAN_CHECKSUM_ZERO_UDP6_TX = 1<<1,
-    NETPLAN_VXLAN_CHECKSUM_ZERO_UDP6_RX = 1<<2,
-    NETPLAN_VXLAN_CHECKSUM_REMOTE_TX = 1<<3,
-    NETPLAN_VXLAN_CHECKSUM_REMOTE_RX = 1<<4,
+    NETPLAN_VXLAN_CHECKSUM_UDP          = 1 << 0,
+    NETPLAN_VXLAN_CHECKSUM_ZERO_UDP6_TX = 1 << 1,
+    NETPLAN_VXLAN_CHECKSUM_ZERO_UDP6_RX = 1 << 2,
+    NETPLAN_VXLAN_CHECKSUM_REMOTE_TX    = 1 << 3,
+    NETPLAN_VXLAN_CHECKSUM_REMOTE_RX    = 1 << 4,
 } NetplanVxlanChecksumFlags;
 
 typedef enum {
-    NETPLAN_VXLAN_EXTENSION_GROUP_POLICY = 1<<0,
-    NETPLAN_VXLAN_EXTENSION_GENERIC_PROTOCOL = 1<<1,
+    NETPLAN_VXLAN_EXTENSION_GROUP_POLICY     = 1 << 0,
+    NETPLAN_VXLAN_EXTENSION_GENERIC_PROTOCOL = 1 << 1,
 } NetplanVxlanExtensionFlags;
 
 // Not strictly speaking a type, but seems fair to keep it around.
@@ -80,18 +80,14 @@ typedef enum {
 } NetplanWifiMode;
 
 typedef struct {
-    char *endpoint;
-    char *public_key;
-    char *preshared_key;
-    GArray *allowed_ips;
+    char* endpoint;
+    char* public_key;
+    char* preshared_key;
+    GArray* allowed_ips;
     guint keepalive;
 } NetplanWireguardPeer;
 
-typedef enum {
-    NETPLAN_WIFI_BAND_DEFAULT,
-    NETPLAN_WIFI_BAND_5,
-    NETPLAN_WIFI_BAND_24
-} NetplanWifiBand;
+typedef enum { NETPLAN_WIFI_BAND_DEFAULT, NETPLAN_WIFI_BAND_5, NETPLAN_WIFI_BAND_24 } NetplanWifiBand;
 
 typedef struct {
     char* address;
@@ -150,37 +146,39 @@ typedef struct {
 } NetplanIPRule;
 
 struct netplan_vxlan {
-        NetplanNetDefinition* link;
-        guint vni;
-        guint ageing;
-        guint limit;
-        guint tos;
-        guint flow_label;
-        guint source_port_min;
-        guint source_port_max;
-        gboolean mac_learning;
-        gboolean arp_proxy;
-        gboolean short_circuit;
-        gboolean independent;
-        NetplanFlags notifications;
-        NetplanFlags checksums;
-        NetplanFlags extensions;
-        NetplanTristate do_not_fragment;
+    NetplanNetDefinition* link;
+    guint vni;
+    guint ageing;
+    guint limit;
+    guint tos;
+    guint flow_label;
+    guint source_port_min;
+    guint source_port_max;
+    gboolean mac_learning;
+    gboolean arp_proxy;
+    gboolean short_circuit;
+    gboolean independent;
+    NetplanFlags notifications;
+    NetplanFlags checksums;
+    NetplanFlags extensions;
+    NetplanTristate do_not_fragment;
 };
 
 struct netplan_state {
-    /* Since both netdefs and netdefs_ordered store pointers to the same elements,
-     * we consider that only netdefs_ordered is owner of this data. One should not
-     * free() objects obtained from netdefs, and proper care should be taken to remove
-     * any reference of an object in netdefs when destroying it from netdefs_ordered.
+    /* Since both netdefs and netdefs_ordered store pointers to the same
+     * elements, we consider that only netdefs_ordered is owner of this data.
+     * One should not free() objects obtained from netdefs, and proper care
+     * should be taken to remove any reference of an object in netdefs when
+     * destroying it from netdefs_ordered.
      */
-    GHashTable *netdefs;
-    GList *netdefs_ordered;
+    GHashTable* netdefs;
+    GList* netdefs_ordered;
     NetplanBackend backend;
     NetplanOVSSettings ovs_settings;
 
-    /* Hashset of the source files used to create this state. Owns its data (glib-allocated
-     * char*) and is initialized with g_hash_table_new_full to avoid leaks. */
+    /* Hashset of the source files used to create this state. Owns its data
+     * (glib-allocated char*) and is initialized with g_hash_table_new_full to
+     * avoid leaks. */
     GHashTable* sources;
 };
 
@@ -202,16 +200,16 @@ struct netplan_parser {
     struct {
         /* Refs to objects allocated elsewhere */
         NetplanNetDefinition* netdef;
-        NetplanAuthenticationSettings *auth;
+        NetplanAuthenticationSettings* auth;
 
         /* Owned refs, not yet referenced anywhere */
-        NetplanWifiAccessPoint *access_point;
+        NetplanWifiAccessPoint* access_point;
         NetplanWireguardPeer* wireguard_peer;
         NetplanAddressOptions* addr_options;
         NetplanIPRoute* route;
         NetplanIPRule* ip_rule;
         NetplanVxlan* vxlan;
-        const char *filepath;
+        const char* filepath;
 
         /* Plain old data representing the backend for which we are
          * currently parsing. Not necessarily the same as the global
@@ -224,14 +222,15 @@ struct netplan_parser {
      * creating a netdef for that id; so by the time we're done parsing the yaml
      * document it should be empty.
      *
-     * Keys are not owned, but the values are. Should be created with NULL and g_free
-     * destructors, respectively, so that the cleanup is automatic at destruction.
+     * Keys are not owned, but the values are. Should be created with NULL and
+     * g_free destructors, respectively, so that the cleanup is automatic at
+     * destruction.
      */
     GHashTable* missing_id;
 
     /* Set of IDs in currently parsed YAML file, for being able to detect
-     * "duplicate ID within one file" vs. allowing a drop-in to override/amend an
-     * existing definition.
+     * "duplicate ID within one file" vs. allowing a drop-in to override/amend
+     * an existing definition.
      *
      * Appears to be unused?
      * */
@@ -255,35 +254,24 @@ struct netplan_state_iterator {
 #define NETPLAN_IP_RULE_FW_MARK_UNSPEC 0
 #define NETPLAN_IP_RULE_TOS_UNSPEC G_MAXUINT
 
-void
-reset_netdef(NetplanNetDefinition* netdef, NetplanDefType type, NetplanBackend renderer);
+void reset_netdef(NetplanNetDefinition* netdef, NetplanDefType type, NetplanBackend renderer);
 
-void
-reset_ip_rule(NetplanIPRule* ip_rule);
+void reset_ip_rule(NetplanIPRule* ip_rule);
 
-void
-reset_ovs_settings(NetplanOVSSettings *settings);
+void reset_ovs_settings(NetplanOVSSettings* settings);
 
-void
-reset_vxlan(NetplanVxlan* vxlan);
+void reset_vxlan(NetplanVxlan* vxlan);
 
-void
-access_point_clear(NetplanWifiAccessPoint** ap, NetplanBackend backend);
+void access_point_clear(NetplanWifiAccessPoint** ap, NetplanBackend backend);
 
-void
-wireguard_peer_clear(NetplanWireguardPeer** peer);
+void wireguard_peer_clear(NetplanWireguardPeer** peer);
 
-void
-address_options_clear(NetplanAddressOptions** options);
+void address_options_clear(NetplanAddressOptions** options);
 
-void
-ip_rule_clear(NetplanIPRule** rule);
+void ip_rule_clear(NetplanIPRule** rule);
 
-void
-route_clear(NetplanIPRoute** route);
+void route_clear(NetplanIPRoute** route);
 
-gboolean
-netplan_state_has_nondefault_globals(const NetplanState* np_state);
+gboolean netplan_state_has_nondefault_globals(const NetplanState* np_state);
 
-void
-clear_netdef_from_list(void* def);
+void clear_netdef_from_list(void* def);

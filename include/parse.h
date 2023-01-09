@@ -23,37 +23,27 @@
  * Functions
  ****************************************************/
 
-NETPLAN_PUBLIC NetplanParser*
-netplan_parser_new();
+NETPLAN_PUBLIC NetplanParser* netplan_parser_new();
 
-NETPLAN_PUBLIC void
-netplan_parser_reset(NetplanParser *npp);
+NETPLAN_PUBLIC void netplan_parser_reset(NetplanParser* npp);
 
-NETPLAN_PUBLIC void
-netplan_parser_clear(NetplanParser **npp);
+NETPLAN_PUBLIC void netplan_parser_clear(NetplanParser** npp);
 
-NETPLAN_PUBLIC gboolean
-netplan_parser_load_yaml(NetplanParser* npp, const char* filename, NetplanError** error);
+NETPLAN_PUBLIC gboolean netplan_parser_load_yaml(NetplanParser* npp, const char* filename, NetplanError** error);
 
-NETPLAN_PUBLIC gboolean
-netplan_parser_load_yaml_from_fd(NetplanParser* npp, int input_fd, NetplanError** error);
+NETPLAN_PUBLIC gboolean netplan_parser_load_yaml_from_fd(NetplanParser* npp, int input_fd, NetplanError** error);
 
-NETPLAN_PUBLIC gboolean
-netplan_parser_load_nullable_fields(NetplanParser* npp, int input_fd, NetplanError** error);
+NETPLAN_PUBLIC gboolean netplan_parser_load_nullable_fields(NetplanParser* npp, int input_fd, NetplanError** error);
 
-NETPLAN_PUBLIC gboolean
-netplan_state_import_parser_results(NetplanState* np_state, NetplanParser* npp, NetplanError** error);
+NETPLAN_PUBLIC gboolean netplan_state_import_parser_results(NetplanState* np_state, NetplanParser* npp,
+                                                            NetplanError** error);
 
 /********** Old API below this ***********/
 
-NETPLAN_PUBLIC gboolean
-netplan_parse_yaml(const char* filename, GError** error);
+NETPLAN_PUBLIC gboolean netplan_parse_yaml(const char* filename, GError** error);
 
-NETPLAN_PUBLIC GHashTable*
-netplan_finish_parse(GError** error);
+NETPLAN_PUBLIC GHashTable* netplan_finish_parse(GError** error);
 
-NETPLAN_PUBLIC guint
-netplan_clear_netdefs();
+NETPLAN_PUBLIC guint netplan_clear_netdefs();
 
-NETPLAN_PUBLIC NetplanBackend
-netplan_get_global_backend();
+NETPLAN_PUBLIC NetplanBackend netplan_get_global_backend();

@@ -17,14 +17,13 @@
 
 #pragma once
 
-#define NETPLAN_PUBLIC __attribute__ ((visibility("default")))
-#define NETPLAN_INTERNAL __attribute__ ((visibility("default")))
-#define NETPLAN_ABI __attribute__ ((visibility("default")))
+#define NETPLAN_PUBLIC __attribute__((visibility("default")))
+#define NETPLAN_INTERNAL __attribute__((visibility("default")))
+#define NETPLAN_ABI __attribute__((visibility("default")))
 
-#define NETPLAN_DEPRECATED __attribute__ ((deprecated))
+#define NETPLAN_DEPRECATED __attribute__((deprecated))
 
 #define NETPLAN_BUFFER_TOO_SMALL -2
-
 
 /****************************************************
  * Parsed definitions
