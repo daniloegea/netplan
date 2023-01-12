@@ -24,20 +24,16 @@
  *
  * Since both netdefs and netdefs_ordered store pointers to the same elements,
  * we consider that only netdefs_ordered is owner of this data. One should not
- * free() objects obtained from netdefs, and proper care should be taken to remove
- * any reference of an object in netdefs when destroying it from netdefs_ordered.
+ * free() objects obtained from netdefs, and proper care should be taken to
+ * remove any reference of an object in netdefs when destroying it from
+ * netdefs_ordered.
  */
-extern GHashTable*
-netdefs;
+extern GHashTable* netdefs;
 
-extern GList*
-netdefs_ordered;
+extern GList* netdefs_ordered;
 
-extern NetplanOVSSettings
-ovs_settings_global;
+extern NetplanOVSSettings ovs_settings_global;
 
-extern NetplanBackend
-global_backend;
+extern NetplanBackend global_backend;
 
-extern NetplanParser
-global_parser;
+extern NetplanParser global_parser;

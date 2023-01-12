@@ -30,9 +30,12 @@ static gboolean
 write_sriov_rebind_systemd_unit(const GString* pfs, const char* rootdir, GError** error)
 {
     g_autofree gchar* id_escaped = NULL;
-    g_autofree char* link = g_strjoin(NULL, rootdir ?: "", "/run/systemd/system/multi-user.target.wants/netplan-sriov-rebind.service", NULL);
-    g_autofree char* path = g_strjoin(NULL, "/run/systemd/system/netplan-sriov-rebind.service", NULL);
-    gchar** split = NULL;
+    g_autofree char* link        = g_strjoin(NULL, rootdir ?: "",
+                                             "/run/systemd/system/multi-user.target.wants/"
+                                                    "netplan-sriov-rebind.service",
+                                             NULL);
+    g_autofree char* path        = g_strjoin(NULL, "/run/systemd/system/netplan-sriov-rebind.service", NULL);
+    gchar** split                = NULL;
 
     GString* s = g_string_new("[Unit]\n");
     g_string_append(s, "Description=(Re-)bind SR-IOV Virtual Functions to their driver\n");
@@ -41,8 +44,7 @@ write_sriov_rebind_systemd_unit(const GString* pfs, const char* rootdir, GError*
     /* Run after udev */
     split = g_strsplit(pfs->str, " ", 0);
     for (unsigned i = 0; split[i]; ++i)
-        g_string_append_printf(s, "After=sys-subsystem-net-devices-%s.device\n",
-                               split[i]);
+        g_string_append_printf(s, "After=sys-subsystem-net-devices-%s.device\n", split[i]);
     g_strfreev(split);
 
     g_string_append(s, "\n[Service]\nType=oneshot\n");
@@ -53,8 +55,7 @@ write_sriov_rebind_systemd_unit(const GString* pfs, const char* rootdir, GError*
     safe_mkdir_p_dir(link);
     if (symlink(path, link) < 0 && errno != EEXIST) {
         // LCOV_EXCL_START
-        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-                    "failed to create enablement symlink: %m\n");
+        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "failed to create enablement symlink: %m\n");
         return FALSE;
         // LCOV_EXCL_STOP
     }
@@ -68,16 +69,16 @@ gboolean
 netplan_state_finish_sriov_write(const NetplanState* np_state, const char* rootdir, GError** error)
 {
     NetplanNetDefinition* def = NULL;
-    NetplanNetDefinition* pf = NULL;
-    gboolean any_sriov = FALSE;
-    gboolean ret = TRUE;
+    NetplanNetDefinition* pf  = NULL;
+    gboolean any_sriov        = FALSE;
+    gboolean ret              = TRUE;
 
     if (np_state) {
         GString* pfs = g_string_new(NULL);
         /* Find netdev interface names for SR-IOV PFs*/
         for (GList* iterator = np_state->netdefs_ordered; iterator; iterator = iterator->next) {
             def = (NetplanNetDefinition*) iterator->data;
-            pf = NULL;
+            pf  = NULL;
             if (def->sriov_explicit_vf_count < G_MAXUINT || def->sriov_link) {
                 any_sriov = TRUE;
                 if (def->sriov_explicit_vf_count < G_MAXUINT)
@@ -92,13 +93,15 @@ netplan_state_finish_sriov_write(const NetplanState* np_state, const char* rootd
                 else if (!pf->has_match) /* netdef_id == interface name */
                     g_string_append_printf(pfs, "%s ", pf->id);
                 else
-                    g_warning("%s: Cannot rebind SR-IOV virtual functions, unknown interface name. "
-                              "Use 'netplan rebind <IFACE>' to rebind manually or use the 'set-name' stanza.",
+                    g_warning("%s: Cannot rebind SR-IOV virtual functions, "
+                              "unknown interface name. "
+                              "Use 'netplan rebind <IFACE>' to rebind manually "
+                              "or use the 'set-name' stanza.",
                               pf->id);
             }
         }
         if (pfs->len > 0) {
-            g_string_truncate(pfs, pfs->len-1); /* cut trailing whitespace */
+            g_string_truncate(pfs, pfs->len - 1); /* cut trailing whitespace */
             ret = write_sriov_rebind_systemd_unit(pfs, rootdir, NULL);
         }
         g_string_free(pfs, TRUE);
@@ -107,7 +110,9 @@ netplan_state_finish_sriov_write(const NetplanState* np_state, const char* rootd
     if (any_sriov) {
         /* For now we execute apply --sriov-only everytime there is a new
         SR-IOV device appearing, which is fine as it's relatively fast */
-        GString *udev_rule = g_string_new("ACTION==\"add\", SUBSYSTEM==\"net\", ATTRS{sriov_totalvfs}==\"?*\", RUN+=\"/usr/sbin/netplan apply --sriov-only\"\n");
+        GString* udev_rule = g_string_new("ACTION==\"add\", SUBSYSTEM==\"net\", "
+                                          "ATTRS{sriov_totalvfs}==\"?*\", "
+                                          "RUN+=\"/usr/sbin/netplan apply --sriov-only\"\n");
         g_string_free_to_file(udev_rule, rootdir, "run/udev/rules.d/99-sriov-netplan-setup.rules", NULL);
     }
 
@@ -120,7 +125,6 @@ netplan_sriov_cleanup(const char* rootdir)
     unlink_glob(rootdir, "/run/udev/rules.d/*-sriov-netplan-*.rules");
     unlink_glob(rootdir, "/run/systemd/system/netplan-sriov-*.service");
     return TRUE;
-
 }
 
 NETPLAN_INTERNAL int
@@ -131,14 +135,15 @@ _netplan_state_get_vf_count_for_def(const NetplanState* np_state, const NetplanN
     int count = 0;
 
     g_hash_table_iter_init(&iter, np_state->netdefs);
-    while (g_hash_table_iter_next (&iter, &key, &value)) {
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
         const NetplanNetDefinition* def = value;
         if (def->sriov_link == netdef)
             count++;
     }
 
     if (netdef->sriov_explicit_vf_count != G_MAXUINT && count > netdef->sriov_explicit_vf_count) {
-        g_set_error(error, 0, 0, "more VFs allocated than the explicit size declared: %d > %d", count, netdef->sriov_explicit_vf_count);
+        g_set_error(error, 0, 0, "more VFs allocated than the explicit size declared: %d > %d", count,
+                    netdef->sriov_explicit_vf_count);
         return -1;
     }
     return netdef->sriov_explicit_vf_count != G_MAXUINT ? netdef->sriov_explicit_vf_count : count;

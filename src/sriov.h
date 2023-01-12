@@ -18,5 +18,4 @@
 #pragma once
 #include "netplan.h"
 
-NETPLAN_INTERNAL gboolean
-netplan_sriov_cleanup(const char* rootdir);
+NETPLAN_INTERNAL gboolean netplan_sriov_cleanup(const char* rootdir);

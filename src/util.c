@@ -34,11 +34,9 @@
 #include "names.h"
 #include "yaml-helpers.h"
 
-NETPLAN_ABI GHashTable*
-wifi_frequency_24;
+NETPLAN_ABI GHashTable* wifi_frequency_24;
 
-NETPLAN_ABI GHashTable*
-wifi_frequency_5;
+NETPLAN_ABI GHashTable* wifi_frequency_5;
 
 typedef struct netplan_state_iterator RealStateIter;
 /**
@@ -63,15 +61,16 @@ safe_mkdir_p_dir(const char* file_path)
  * @path: path of file to write (@rootdir will be prepended)
  * @suffix: optional suffix to append to path
  */
-void g_string_free_to_file(GString* s, const char* rootdir, const char* path, const char* suffix)
+void
+g_string_free_to_file(GString* s, const char* rootdir, const char* path, const char* suffix)
 {
-    g_autofree char* full_path = NULL;
+    g_autofree char* full_path   = NULL;
     g_autofree char* path_suffix = NULL;
-    g_autofree char* contents = g_string_free(s, FALSE);
-    GError* error = NULL;
+    g_autofree char* contents    = g_string_free(s, FALSE);
+    GError* error                = NULL;
 
     path_suffix = g_strjoin(NULL, path, suffix, NULL);
-    full_path = g_build_path(G_DIR_SEPARATOR_S, rootdir ?: G_DIR_SEPARATOR_S, path_suffix, NULL);
+    full_path   = g_build_path(G_DIR_SEPARATOR_S, rootdir ?: G_DIR_SEPARATOR_S, path_suffix, NULL);
     safe_mkdir_p_dir(full_path);
     if (!g_file_set_contents(full_path, contents, -1, &error)) {
         /* the mkdir() just succeeded, there is no sensible
@@ -110,11 +109,12 @@ unlink_glob(const char* rootdir, const char* _glob)
 /**
  * Return a glob of all *.yaml files in /{lib,etc,run}/netplan/ (in this order)
  */
-int find_yaml_glob(const char* rootdir, glob_t* out_glob)
+int
+find_yaml_glob(const char* rootdir, glob_t* out_glob)
 {
     int rc;
     g_autofree char* rglob = g_strjoin(NULL, rootdir ?: "", G_DIR_SEPARATOR_S, "{lib,etc,run}/netplan/*.yaml", NULL);
-    rc = glob(rglob, GLOB_BRACE, NULL, out_glob);
+    rc                     = glob(rglob, GLOB_BRACE, NULL, out_glob);
     if (rc != 0 && rc != GLOB_NOMATCH) {
         // LCOV_EXCL_START
         g_fprintf(stderr, "failed to glob for %s: %m\n", rglob);
@@ -124,7 +124,6 @@ int find_yaml_glob(const char* rootdir, glob_t* out_glob)
 
     return 0;
 }
-
 
 /**
  * create a yaml patch from a "set expression"
@@ -142,13 +141,13 @@ int find_yaml_glob(const char* rootdir, glob_t* out_glob)
 gboolean
 netplan_util_create_yaml_patch(const char* conf_obj_path, const char* obj_payload, int output_fd, GError** error)
 {
-	yaml_emitter_t emitter;
-	yaml_parser_t parser;
-	yaml_event_t event;
-	int token_depth = 0;
-    int out_dup = -1;
+    yaml_emitter_t emitter;
+    yaml_parser_t parser;
+    yaml_event_t event;
+    int token_depth  = 0;
+    int out_dup      = -1;
     FILE* out_stream = NULL;
-    int ret = FALSE;
+    int ret          = FALSE;
 
     out_dup = dup(output_fd);
     if (out_dup < 0)
@@ -166,18 +165,19 @@ netplan_util_create_yaml_patch(const char* conf_obj_path, const char* obj_payloa
     if (!yaml_emitter_emit(&emitter, &event))
         goto err_path; // LCOV_EXCL_LINE
 
-    char **tokens = g_strsplit_set(conf_obj_path, "\t", -1);
-	for (; tokens[token_depth] != NULL; token_depth++) {
+    char** tokens = g_strsplit_set(conf_obj_path, "\t", -1);
+    for (; tokens[token_depth] != NULL; token_depth++) {
         YAML_MAPPING_OPEN(&event, &emitter);
         YAML_SCALAR_PLAIN(&event, &emitter, tokens[token_depth]);
     }
     g_strfreev(tokens);
 
     yaml_parser_initialize(&parser);
-    yaml_parser_set_input_string(&parser, (const unsigned char *)obj_payload, strlen(obj_payload));
+    yaml_parser_set_input_string(&parser, (const unsigned char*) obj_payload, strlen(obj_payload));
     while (TRUE) {
         if (!yaml_parser_parse(&parser, &event)) {
-            g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "Error parsing YAML: %s", parser.problem);
+            g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "Error parsing YAML: %s",
+                        parser.problem);
             goto cleanup;
         }
         if (event.type == YAML_STREAM_END_EVENT || event.type == YAML_DOCUMENT_END_EVENT)
@@ -196,9 +196,9 @@ netplan_util_create_yaml_patch(const char* conf_obj_path, const char* obj_payloa
                 if (!yaml_emitter_emit(&emitter, &event))
                     goto err_path; // LCOV_EXCL_LINE
         }
-	}
+    }
 
-	for (; token_depth > 0; token_depth--)
+    for (; token_depth > 0; token_depth--)
         YAML_MAPPING_CLOSE(&event, &emitter);
 
     yaml_document_end_event_initialize(&event, 1);
@@ -230,16 +230,18 @@ file_error:
     if (out_dup >= 0)
         close(out_dup);
     return FALSE;
-// LCOV_EXCL_STOP
+    // LCOV_EXCL_STOP
 }
 
 static gboolean
-copy_yaml_subtree(yaml_parser_t *parser, yaml_emitter_t *emitter, GError** error) {
-	yaml_event_t event;
+copy_yaml_subtree(yaml_parser_t* parser, yaml_emitter_t* emitter, GError** error)
+{
+    yaml_event_t event;
     int map_count = 0, seq_count = 0;
     do {
-		if (!yaml_parser_parse(parser, &event)) {
-            g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "Error parsing YAML: %s", parser->problem);
+        if (!yaml_parser_parse(parser, &event)) {
+            g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "Error parsing YAML: %s",
+                        parser->problem);
             return FALSE;
         }
 
@@ -261,7 +263,8 @@ copy_yaml_subtree(yaml_parser_t *parser, yaml_emitter_t *emitter, GError** error
         }
         if (emitter && !yaml_emitter_emit(emitter, &event)) {
             // LCOV_EXCL_START
-            g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "Error emitting YAML: %s", emitter->problem);
+            g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "Error emitting YAML: %s",
+                        emitter->problem);
             return FALSE;
             // LCOV_EXCL_STOP
         }
@@ -270,13 +273,16 @@ copy_yaml_subtree(yaml_parser_t *parser, yaml_emitter_t *emitter, GError** error
 }
 
 /**
- * Given a YAML tree and a YAML path (array of keys with NULL as the last array element),
- * emits the subtree matching the path, while emitting the rest of the data into the void.
+ * Given a YAML tree and a YAML path (array of keys with NULL as the last array
+ * element), emits the subtree matching the path, while emitting the rest of the
+ * data into the void.
  */
 static gboolean
-emit_yaml_subtree(yaml_parser_t *parser, yaml_emitter_t *emitter, char** yaml_path, GError** error) {
-	yaml_event_t event;
-    /* If the path component is NULL, we're done with the trimming, we can just copy the whole subtree */
+emit_yaml_subtree(yaml_parser_t* parser, yaml_emitter_t* emitter, char** yaml_path, GError** error)
+{
+    yaml_event_t event;
+    /* If the path component is NULL, we're done with the trimming, we can just
+     * copy the whole subtree */
     if (!(*yaml_path))
         return copy_yaml_subtree(parser, emitter, error);
 
@@ -291,12 +297,14 @@ emit_yaml_subtree(yaml_parser_t *parser, yaml_emitter_t *emitter, char** yaml_pa
             goto parser_err_path;
         if (event.type == YAML_MAPPING_END_EVENT)
             break;
-        if (g_strcmp0(*yaml_path, (char*)event.data.scalar.value) == 0) {
-            /* Go further down, popping the component we just used from the path */
-            if (!emit_yaml_subtree(parser, emitter, yaml_path+1, error))
+        if (g_strcmp0(*yaml_path, (char*) event.data.scalar.value) == 0) {
+            /* Go further down, popping the component we just used from the path
+             */
+            if (!emit_yaml_subtree(parser, emitter, yaml_path + 1, error))
                 return FALSE;
         } else {
-            /* We're out of the path, so we trim the branch by "emitting" the data into a NULL emitter */
+            /* We're out of the path, so we trim the branch by "emitting" the
+             * data into a NULL emitter */
             if (!copy_yaml_subtree(parser, NULL, error))
                 return FALSE;
         }
@@ -309,14 +317,15 @@ parser_err_path:
 }
 
 NETPLAN_INTERNAL gboolean
-netplan_util_dump_yaml_subtree(const char* prefix, int input_fd, int output_fd, GError** error) {
-    gboolean ret = TRUE;
-    char **yaml_path = NULL;
-	yaml_emitter_t emitter;
-	yaml_parser_t parser;
-	yaml_event_t event;
+netplan_util_dump_yaml_subtree(const char* prefix, int input_fd, int output_fd, GError** error)
+{
+    gboolean ret     = TRUE;
+    char** yaml_path = NULL;
+    yaml_emitter_t emitter;
+    yaml_parser_t parser;
+    yaml_event_t event;
     int in_dup = -1, out_dup = -1;
-    FILE* input = NULL;
+    FILE* input  = NULL;
     FILE* output = NULL;
 
     in_dup = dup(input_fd);
@@ -326,7 +335,7 @@ netplan_util_dump_yaml_subtree(const char* prefix, int input_fd, int output_fd, 
     if (out_dup < 0)
         goto file_error; // LCOV_EXCL_LINE
 
-    input = fdopen(in_dup, "r");
+    input  = fdopen(in_dup, "r");
     output = fdopen(out_dup, "w");
     if (!input || !output)
         goto file_error;
@@ -368,9 +377,9 @@ netplan_util_dump_yaml_subtree(const char* prefix, int input_fd, int output_fd, 
     goto cleanup;
 
 file_error:
-        g_set_error(error, G_FILE_ERROR, errno, "%s", g_strerror(errno));
-        ret = FALSE;
-        goto cleanup;
+    g_set_error(error, G_FILE_ERROR, errno, "%s", g_strerror(errno));
+    ret = FALSE;
+    goto cleanup;
 // LCOV_EXCL_START
 parser_err_path:
     g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT, "Error parsing YAML: %s", parser.problem);
@@ -404,16 +413,14 @@ wifi_get_freq24(int channel)
     if (!wifi_frequency_24) {
         wifi_frequency_24 = g_hash_table_new(g_direct_hash, g_direct_equal);
         /* Initialize 2.4GHz frequencies, as of:
-         * https://en.wikipedia.org/wiki/List_of_WLAN_channels#2.4_GHz_(802.11b/g/n/ax) */
+         * https://en.wikipedia.org/wiki/List_of_WLAN_channels#2.4_GHz_(802.11b/g/n/ax)
+         */
         for (unsigned i = 0; i < 13; i++) {
-            g_hash_table_insert(wifi_frequency_24, GINT_TO_POINTER(i+1),
-                                GINT_TO_POINTER(2412+i*5));
+            g_hash_table_insert(wifi_frequency_24, GINT_TO_POINTER(i + 1), GINT_TO_POINTER(2412 + i * 5));
         }
-        g_hash_table_insert(wifi_frequency_24, GINT_TO_POINTER(14),
-                            GINT_TO_POINTER(2484));
+        g_hash_table_insert(wifi_frequency_24, GINT_TO_POINTER(14), GINT_TO_POINTER(2484));
     }
-    return GPOINTER_TO_INT(g_hash_table_lookup(wifi_frequency_24,
-                           GINT_TO_POINTER(channel)));
+    return GPOINTER_TO_INT(g_hash_table_lookup(wifi_frequency_24, GINT_TO_POINTER(channel)));
 }
 
 /**
@@ -422,11 +429,9 @@ wifi_get_freq24(int channel)
 int
 wifi_get_freq5(int channel)
 {
-    int channels[] = { 7, 8, 9, 11, 12, 16, 32, 34, 36, 38, 40, 42, 44, 46, 48,
-                       50, 52, 54, 56, 58, 60, 62, 64, 68, 96, 100, 102, 104,
-                       106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126,
-                       128, 132, 134, 136, 138, 140, 142, 144, 149, 151, 153,
-                       155, 157, 159, 161, 165, 169, 173 };
+    int channels[] = {7,   8,   9,   11,  12,  16,  32,  34,  36,  38,  40,  42,  44,  46,  48,  50,  52,  54,  56,
+                      58,  60,  62,  64,  68,  96,  100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124,
+                      126, 128, 132, 134, 136, 138, 140, 142, 144, 149, 151, 153, 155, 157, 159, 161, 165, 169, 173};
     gboolean found = FALSE;
     for (unsigned i = 0; i < sizeof(channels) / sizeof(int); i++) {
         if (channel == channels[i]) {
@@ -442,14 +447,14 @@ wifi_get_freq5(int channel)
         wifi_frequency_5 = g_hash_table_new(g_direct_hash, g_direct_equal);
         /* Initialize 5GHz frequencies, as of:
          * https://en.wikipedia.org/wiki/List_of_WLAN_channels#5.0_GHz_(802.11j)_WLAN
-         * Skipping channels 183-196. They are valid only in Japan with registration needed */
+         * Skipping channels 183-196. They are valid only in Japan with
+         * registration needed */
         for (unsigned i = 0; i < sizeof(channels) / sizeof(int); i++) {
             g_hash_table_insert(wifi_frequency_5, GINT_TO_POINTER(channels[i]),
-                                GINT_TO_POINTER(5000+channels[i]*5));
+                                GINT_TO_POINTER(5000 + channels[i] * 5));
         }
     }
-    return GPOINTER_TO_INT(g_hash_table_lookup(wifi_frequency_5,
-                           GINT_TO_POINTER(channel)));
+    return GPOINTER_TO_INT(g_hash_table_lookup(wifi_frequency_5, GINT_TO_POINTER(channel)));
 }
 
 /**
@@ -459,21 +464,27 @@ wifi_get_freq5(int channel)
 gchar*
 systemd_escape(char* string)
 {
-    g_autoptr(GError) err = NULL;
+    g_autoptr(GError) err     = NULL;
     g_autofree gchar* stderrh = NULL;
-    gint exit_status = 0;
-    gchar *escaped;
+    gint exit_status          = 0;
+    gchar* escaped;
 
-    gchar *argv[] = {"bin" "/" "systemd-escape", string, NULL};
+    gchar* argv[] = {"bin"
+                     "/"
+                     "systemd-escape",
+                     string, NULL};
     g_spawn_sync("/", argv, NULL, 0, NULL, NULL, &escaped, &stderrh, &exit_status, &err);
-    #if GLIB_CHECK_VERSION (2, 70, 0)
+#if GLIB_CHECK_VERSION(2, 70, 0)
     g_spawn_check_wait_status(exit_status, &err);
-    #else
+#else
     g_spawn_check_exit_status(exit_status, &err);
-    #endif
+#endif
     if (err != NULL) {
         // LCOV_EXCL_START
-        g_fprintf(stderr, "failed to ask systemd to escape %s; exit %d\nstdout: '%s'\nstderr: '%s'", string, exit_status, escaped, stderrh);
+        g_fprintf(stderr,
+                  "failed to ask systemd to escape %s; exit %d\nstdout: "
+                  "'%s'\nstderr: '%s'",
+                  string, exit_status, escaped, stderrh);
         exit(1);
         // LCOV_EXCL_STOP
     }
@@ -485,16 +496,16 @@ systemd_escape(char* string)
 gboolean
 netplan_delete_connection(const char* id, const char* rootdir)
 {
-    g_autofree gchar* del = NULL;
-    g_autoptr(GError) error = NULL;
+    g_autofree gchar* del    = NULL;
+    g_autoptr(GError) error  = NULL;
     NetplanNetDefinition* nd = NULL;
-    gboolean ret = TRUE;
+    gboolean ret             = TRUE;
 
     NetplanState* np_state = netplan_state_new();
-    NetplanParser* npp = netplan_parser_new();
+    NetplanParser* npp     = netplan_parser_new();
 
     /* parse all YAML files */
-    if (   !netplan_parser_load_yaml_hierarchy(npp, rootdir, &error)
+    if (!netplan_parser_load_yaml_hierarchy(npp, rootdir, &error)
         || !netplan_state_import_parser_results(np_state, npp, &error)) {
         // LCOV_EXCL_START
         g_fprintf(stderr, "%s\n", error->message);
@@ -521,58 +532,70 @@ netplan_delete_connection(const char* id, const char* rootdir)
 
     del = g_strdup_printf("network.%s.%s=NULL", netplan_def_type_name(nd->type), id);
 
-    /* TODO: refactor logic to actually be inside the library instead of spawning another process */
-    const gchar *argv[] = { SBINDIR "/" "netplan", "set", del, NULL, NULL, NULL };
+    /* TODO: refactor logic to actually be inside the library instead of
+     * spawning another process */
+    const gchar* argv[] = {SBINDIR "/"
+                                   "netplan",
+                           "set",
+                           del,
+                           NULL,
+                           NULL,
+                           NULL};
     if (rootdir) {
         argv[3] = "--root-dir";
         argv[4] = rootdir;
     }
     if (getenv("TEST_NETPLAN_CMD") != 0)
-       argv[0] = getenv("TEST_NETPLAN_CMD");
-    ret = g_spawn_sync(NULL, (gchar**)argv, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+        argv[0] = getenv("TEST_NETPLAN_CMD");
+    ret = g_spawn_sync(NULL, (gchar**) argv, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL);
 
 cleanup:
-    if (npp) netplan_parser_clear(&npp);
-    if (np_state) netplan_state_clear(&np_state);
+    if (npp)
+        netplan_parser_clear(&npp);
+    if (np_state)
+        netplan_state_clear(&np_state);
     return ret;
 }
 
 gboolean
 netplan_generate(const char* rootdir)
 {
-    /* TODO: refactor logic to actually be inside the library instead of spawning another process */
-    const gchar *argv[] = { SBINDIR "/" "netplan", "generate", NULL , NULL, NULL };
+    /* TODO: refactor logic to actually be inside the library instead of
+     * spawning another process */
+    const gchar* argv[] = {SBINDIR "/"
+                                   "netplan",
+                           "generate", NULL, NULL, NULL};
     if (rootdir) {
         argv[2] = "--root-dir";
         argv[3] = rootdir;
     }
     if (getenv("TEST_NETPLAN_CMD") != 0)
-       argv[0] = getenv("TEST_NETPLAN_CMD");
-    return g_spawn_sync(NULL, (gchar**)argv, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+        argv[0] = getenv("TEST_NETPLAN_CMD");
+    return g_spawn_sync(NULL, (gchar**) argv, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL);
 }
 
 /**
- * Extract the netplan netdef ID from a NetworkManager connection profile (keyfile),
- * generated by netplan. Used by the NetworkManager YAML backend.
+ * Extract the netplan netdef ID from a NetworkManager connection profile
+ * (keyfile), generated by netplan. Used by the NetworkManager YAML backend.
  */
 ssize_t
 netplan_get_id_from_nm_filepath(const char* filename, const char* ssid, char* out_buffer, size_t out_buf_size)
 {
     g_autofree gchar* escaped_ssid = NULL;
-    g_autofree gchar* suffix = NULL;
-    const char* nm_prefix = "/run/NetworkManager/system-connections/netplan-";
-    const char* pos = g_strrstr(filename, nm_prefix);
-    const char* start = NULL;
-    const char* end = NULL;
-    gsize id_len = 0;
+    g_autofree gchar* suffix       = NULL;
+    const char* nm_prefix          = "/run/NetworkManager/system-connections/netplan-";
+    const char* pos                = g_strrstr(filename, nm_prefix);
+    const char* start              = NULL;
+    const char* end                = NULL;
+    gsize id_len                   = 0;
 
     if (!pos)
         return 0;
 
     if (ssid) {
         escaped_ssid = g_uri_escape_string(ssid, NULL, TRUE);
-        suffix = g_strdup_printf("-%s.nmconnection", escaped_ssid);
-        end = g_strrstr(filename, suffix);
+        suffix       = g_strdup_printf("-%s.nmconnection", escaped_ssid);
+        end          = g_strrstr(filename, suffix);
     } else
         end = g_strrstr(filename, ".nmconnection");
 
@@ -580,7 +603,7 @@ netplan_get_id_from_nm_filepath(const char* filename, const char* ssid, char* ou
         return 0;
 
     /* Move pointer to start of netplan ID inside filename string */
-    start = pos + strlen(nm_prefix);
+    start  = pos + strlen(nm_prefix);
     id_len = end - start;
 
     if (out_buf_size < id_len + 1)
@@ -593,16 +616,19 @@ netplan_get_id_from_nm_filepath(const char* filename, const char* ssid, char* ou
 }
 
 ssize_t
-netplan_netdef_get_output_filename(const NetplanNetDefinition* netdef, const char* ssid, char* out_buffer, size_t out_buf_size)
+netplan_netdef_get_output_filename(const NetplanNetDefinition* netdef, const char* ssid, char* out_buffer,
+                                   size_t out_buf_size)
 {
     g_autofree gchar* conf_path = NULL;
 
     if (netdef->backend == NETPLAN_BACKEND_NM) {
         if (ssid) {
             g_autofree char* escaped_ssid = g_uri_escape_string(ssid, NULL, TRUE);
-            conf_path = g_strjoin(NULL, "/run/NetworkManager/system-connections/netplan-", netdef->id, "-", escaped_ssid, ".nmconnection", NULL);
+            conf_path = g_strjoin(NULL, "/run/NetworkManager/system-connections/netplan-", netdef->id, "-",
+                                  escaped_ssid, ".nmconnection", NULL);
         } else {
-            conf_path = g_strjoin(NULL, "/run/NetworkManager/system-connections/netplan-", netdef->id, ".nmconnection", NULL);
+            conf_path =
+                g_strjoin(NULL, "/run/NetworkManager/system-connections/netplan-", netdef->id, ".nmconnection", NULL);
         }
 
     } else if (netdef->backend == NETPLAN_BACKEND_NETWORKD || netdef->backend == NETPLAN_BACKEND_OVS) {
@@ -627,9 +653,10 @@ netplan_parser_load_yaml_hierarchy(NetplanParser* npp, const char* rootdir, GErr
      * and those after the ones from /lib. */
     if (find_yaml_glob(rootdir, &gl) != 0)
         return FALSE; // LCOV_EXCL_LINE
-    /* keys are strdup()ed, free them; values point into the glob_t, don't free them */
+    /* keys are strdup()ed, free them; values point into the glob_t, don't free
+     * them */
     g_autoptr(GHashTable) configs = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-    g_autoptr(GList) config_keys = NULL;
+    g_autoptr(GList) config_keys  = NULL;
 
     for (size_t i = 0; i < gl.gl_pathc; ++i)
         g_hash_table_insert(configs, g_path_get_basename(gl.gl_pathv[i]), gl.gl_pathv[i]);
@@ -649,7 +676,7 @@ netplan_parser_load_yaml_hierarchy(NetplanParser* npp, const char* rootdir, GErr
  * Get a static string describing the default global network
  * for a given address family.
  */
-const char *
+const char*
 get_global_network(int ip_family)
 {
     g_assert(ip_family == AF_INET || ip_family == AF_INET6);
@@ -659,7 +686,7 @@ get_global_network(int ip_family)
         return "::/0";
 }
 
-const char *
+const char*
 get_unspecified_address(int ip_family)
 {
     g_assert(ip_family == AF_INET || ip_family == AF_INET6);
@@ -675,15 +702,14 @@ struct netdef_pertype_iter {
 NETPLAN_INTERNAL struct netdef_pertype_iter*
 _netplan_state_new_netdef_pertype_iter(NetplanState* np_state, const char* def_type)
 {
-    NetplanDefType type = def_type ? netplan_def_type_from_name(def_type) : NETPLAN_DEF_TYPE_NONE;
+    NetplanDefType type              = def_type ? netplan_def_type_from_name(def_type) : NETPLAN_DEF_TYPE_NONE;
     struct netdef_pertype_iter* iter = g_malloc0(sizeof(*iter));
-    iter->type = type;
-    iter->np_state = np_state;
+    iter->type                       = type;
+    iter->np_state                   = np_state;
     if (np_state->netdefs)
         g_hash_table_iter_init(&iter->iter, np_state->netdefs);
     return iter;
 }
-
 
 NETPLAN_INTERNAL NetplanNetDefinition*
 _netplan_netdef_pertype_iter_next(struct netdef_pertype_iter* it)
@@ -714,19 +740,14 @@ __attribute((alias("_netplan_netdef_pertype_iter_free"))) NETPLAN_ABI void
 _netplan_iter_defs_per_devtype_free(struct netdef_pertype_iter* it);
 
 gboolean
-has_openvswitch(const NetplanOVSSettings* ovs, NetplanBackend backend, GHashTable *ovs_ports)
+has_openvswitch(const NetplanOVSSettings* ovs, NetplanBackend backend, GHashTable* ovs_ports)
 {
     return (ovs_ports && g_hash_table_size(ovs_ports) > 0)
-            || (ovs->external_ids && g_hash_table_size(ovs->external_ids) > 0)
-            || (ovs->other_config && g_hash_table_size(ovs->other_config) > 0)
-            || ovs->lacp
-            || ovs->fail_mode
-            || ovs->mcast_snooping
-            || ovs->rstp
-            || ovs->protocols
-            || (ovs->ssl.ca_certificate || ovs->ssl.client_certificate || ovs->ssl.client_key)
-            || (ovs->controller.connection_mode || ovs->controller.addresses)
-            || backend == NETPLAN_BACKEND_OVS;
+           || (ovs->external_ids && g_hash_table_size(ovs->external_ids) > 0)
+           || (ovs->other_config && g_hash_table_size(ovs->other_config) > 0) || ovs->lacp || ovs->fail_mode
+           || ovs->mcast_snooping || ovs->rstp || ovs->protocols
+           || (ovs->ssl.ca_certificate || ovs->ssl.client_certificate || ovs->ssl.client_key)
+           || (ovs->controller.connection_mode || ovs->controller.addresses) || backend == NETPLAN_BACKEND_OVS;
 }
 
 void
@@ -739,16 +760,17 @@ mark_data_as_dirty(NetplanParser* npp, const void* data_ptr)
         npp->current.netdef->_private = g_new0(struct private_netdef_data, 1);
     if (!npp->current.netdef->_private->dirty_fields)
         npp->current.netdef->_private->dirty_fields = g_hash_table_new(g_direct_hash, g_direct_equal);
-    g_hash_table_insert(npp->current.netdef->_private->dirty_fields, (void*)data_ptr, (void*)data_ptr);
+    g_hash_table_insert(npp->current.netdef->_private->dirty_fields, (void*) data_ptr, (void*) data_ptr);
 }
 
 gboolean
-complex_object_is_dirty(const NetplanNetDefinition* def, const void* obj, size_t obj_size) {
+complex_object_is_dirty(const NetplanNetDefinition* def, const void* obj, size_t obj_size)
+{
     const char* ptr = obj;
     if (def->_private == NULL || def->_private->dirty_fields == NULL)
         return FALSE;
     for (size_t i = 0; i < obj_size; ++i) {
-        if (g_hash_table_contains(def->_private->dirty_fields, ptr+i))
+        if (g_hash_table_contains(def->_private->dirty_fields, ptr + i))
             return TRUE;
     }
     return FALSE;
@@ -781,7 +803,8 @@ netplan_copy_string(const char* input, char* out_buffer, size_t out_size)
 }
 
 gboolean
-netplan_netdef_match_interface(const NetplanNetDefinition* netdef, const char* name, const char* mac, const char* driver_name)
+netplan_netdef_match_interface(const NetplanNetDefinition* netdef, const char* name, const char* mac,
+                               const char* driver_name)
 {
     if (!netdef->has_match)
         return !g_strcmp0(name, netdef->id);
@@ -843,17 +866,17 @@ netplan_state_iterator_init(const NetplanState* np_state, NetplanStateIterator* 
 {
     g_assert(iter);
     RealStateIter* _iter = (RealStateIter*) iter;
-    _iter->next = g_list_first(np_state->netdefs_ordered);
+    _iter->next          = g_list_first(np_state->netdefs_ordered);
 }
 
 NetplanNetDefinition*
 netplan_state_iterator_next(NetplanStateIterator* iter)
 {
     NetplanNetDefinition* netdef = NULL;
-    RealStateIter* _iter = (RealStateIter*) iter;
+    RealStateIter* _iter         = (RealStateIter*) iter;
 
     if (_iter && _iter->next) {
-        netdef = _iter->next->data;
+        netdef      = _iter->next->data;
         _iter->next = g_list_next(_iter->next);
     }
 

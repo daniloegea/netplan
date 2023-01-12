@@ -20,22 +20,13 @@
 #include "netplan.h"
 #include <glib.h>
 
-NETPLAN_INTERNAL gboolean
-netplan_netdef_write_networkd(
-        const NetplanState* np_state,
-        const NetplanNetDefinition* def,
-        const char *rootdir,
-        gboolean* has_been_written,
-        GError** error);
+NETPLAN_INTERNAL gboolean netplan_netdef_write_networkd(const NetplanState* np_state, const NetplanNetDefinition* def,
+                                                        const char* rootdir, gboolean* has_been_written,
+                                                        GError** error);
 
-NETPLAN_INTERNAL gboolean
-netplan_netdef_write_network_file(
-        const NetplanState* np_state,
-        const NetplanNetDefinition* def,
-        const char *rootdir,
-        const char* path,
-        gboolean* has_been_written,
-        GError** error);
+NETPLAN_INTERNAL gboolean netplan_netdef_write_network_file(const NetplanState* np_state,
+                                                            const NetplanNetDefinition* def, const char* rootdir,
+                                                            const char* path, gboolean* has_been_written,
+                                                            GError** error);
 
-NETPLAN_INTERNAL void
-netplan_networkd_cleanup(const char* rootdir);
+NETPLAN_INTERNAL void netplan_networkd_cleanup(const char* rootdir);

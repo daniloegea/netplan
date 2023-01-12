@@ -62,9 +62,10 @@ is_ip6_address(const char* address)
 }
 
 gboolean
-is_hostname(const char *hostname)
+is_hostname(const char* hostname)
 {
-    static const gchar *pattern = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
+    static const gchar* pattern = "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\."
+                                  ")*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])$";
     return g_regex_match_simple(pattern, hostname, G_REGEX_CASELESS, G_REGEX_MATCH_NOTEMPTY);
 }
 
@@ -73,7 +74,7 @@ is_wireguard_key(const char* key)
 {
     /* Check if this is (most likely) a 265bit, base64 encoded wireguard key */
     if (strlen(key) == 44 && key[43] == '=' && key[42] != '=') {
-        static const gchar *pattern = "^(?:[A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=)+$";
+        static const gchar* pattern = "^(?:[A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=)+$";
         return g_regex_match_simple(pattern, key, 0, G_REGEX_MATCH_NOTEMPTY);
     }
     return FALSE;
@@ -81,11 +82,12 @@ is_wireguard_key(const char* key)
 
 /* Check sanity of OpenVSwitch controller targets */
 gboolean
-validate_ovs_target(gboolean host_first, gchar* s) {
-    static guint dport = 6653; // the default port
+validate_ovs_target(gboolean host_first, gchar* s)
+{
+    static guint dport     = 6653; // the default port
     g_autofree gchar* host = NULL;
     g_autofree gchar* port = NULL;
-    gchar** vec = NULL;
+    gchar** vec            = NULL;
 
     /* Format tcp:host[:port] or ssl:host[:port] */
     if (host_first) {
@@ -93,13 +95,13 @@ validate_ovs_target(gboolean host_first, gchar* s) {
         // IP6 host, indicated by bracketed notation ([..IPv6..])
         if (s[0] == '[') {
             gchar* tmp = NULL;
-            tmp = s+1; //get rid of leading '['
+            tmp        = s + 1; // get rid of leading '['
             // append default port to unify parsing
             if (!g_strrstr(tmp, "]:"))
                 vec = g_strsplit(g_strdup_printf("%s:%u", tmp, dport), "]:", 2);
             else
                 vec = g_strsplit(tmp, "]:", 2);
-        // IP4 host
+            // IP4 host
         } else {
             // append default port to unify parsing
             if (!g_strrstr(s, ":"))
@@ -108,22 +110,22 @@ validate_ovs_target(gboolean host_first, gchar* s) {
                 vec = g_strsplit(s, ":", 2);
         }
         // host and port are always set
-        host = g_strdup(vec[0]); //set host alias
-        port = g_strdup(vec[1]); //set port alias
+        host = g_strdup(vec[0]); // set host alias
+        port = g_strdup(vec[1]); // set port alias
         g_assert(vec[2] == NULL);
         g_strfreev(vec);
-    /* Format ptcp:[port][:host] or pssl:[port][:host] */
+        /* Format ptcp:[port][:host] or pssl:[port][:host] */
     } else {
         // special case: "ptcp:" (no port, no host)
         if (!g_strcmp0(s, ""))
             port = g_strdup_printf("%u", dport);
         else {
-            vec = g_strsplit(s, ":", 2);
+            vec  = g_strsplit(s, ":", 2);
             port = g_strdup(vec[0]);
             host = g_strdup(vec[1]);
             // get rid of leading & trailing IPv6 brackets
             if (host && host[0] == '[') {
-                char **split = g_strsplit_set(host, "[]", 3);
+                char** split = g_strsplit_set(host, "[]", 3);
                 g_free(host);
                 host = g_strjoinv("", split);
                 g_strfreev(split);
@@ -135,7 +137,7 @@ validate_ovs_target(gboolean host_first, gchar* s) {
     g_assert(port != NULL);
     // special case where IPv6 notation contains '%iface' name
     if (host && g_strrstr(host, "%")) {
-        gchar** split = g_strsplit (host, "%", 2);
+        gchar** split = g_strsplit(host, "%", 2);
         g_free(host);
         host = g_strdup(split[0]); // designated scope for IPv6 link-level addresses
         g_assert(split[1] != NULL && split[2] == NULL);
@@ -182,7 +184,7 @@ validate_tunnel_grammar(const NetplanParser* npp, NetplanNetDefinition* nd, yaml
         if (!nd->wireguard_peers || nd->wireguard_peers->len == 0)
             return yaml_error(npp, node, error, "%s: at least one peer is required.", nd->id);
         for (guint i = 0; i < nd->wireguard_peers->len; i++) {
-            NetplanWireguardPeer *peer = g_array_index (nd->wireguard_peers, NetplanWireguardPeer*, i);
+            NetplanWireguardPeer* peer = g_array_index(nd->wireguard_peers, NetplanWireguardPeer*, i);
 
             if (!peer->public_key)
                 return yaml_error(npp, node, error, "%s: keys.public is required.", nd->id);
@@ -213,29 +215,41 @@ validate_tunnel_grammar(const NetplanParser* npp, NetplanNetDefinition* nd, yaml
     if (nd->tunnel_ttl && nd->tunnel_ttl > 255)
         return yaml_error(npp, node, error, "%s: 'ttl' property for tunnel must be in range [1...255]", nd->id);
 
-    switch(nd->tunnel.mode) {
+    switch (nd->tunnel.mode) {
         case NETPLAN_TUNNEL_MODE_IPIP6:
         case NETPLAN_TUNNEL_MODE_IP6IP6:
         case NETPLAN_TUNNEL_MODE_IP6GRE:
         case NETPLAN_TUNNEL_MODE_IP6GRETAP:
         case NETPLAN_TUNNEL_MODE_VTI6:
             if (!is_ip6_address(nd->tunnel.local_ip))
-                return yaml_error(npp, node, error, "%s: 'local' must be a valid IPv6 address for this tunnel type", nd->id);
+                return yaml_error(npp, node, error,
+                                  "%s: 'local' must be a valid IPv6 address "
+                                  "for this tunnel type",
+                                  nd->id);
             if (!is_ip6_address(nd->tunnel.remote_ip))
-                return yaml_error(npp, node, error, "%s: 'remote' must be a valid IPv6 address for this tunnel type", nd->id);
+                return yaml_error(npp, node, error,
+                                  "%s: 'remote' must be a valid IPv6 address "
+                                  "for this tunnel type",
+                                  nd->id);
             break;
 
         case NETPLAN_TUNNEL_MODE_VXLAN:
-            if ((nd->tunnel.local_ip && nd->tunnel.remote_ip) &&
-                (is_ip6_address(nd->tunnel.local_ip) != is_ip6_address(nd->tunnel.remote_ip)))
+            if ((nd->tunnel.local_ip && nd->tunnel.remote_ip)
+                && (is_ip6_address(nd->tunnel.local_ip) != is_ip6_address(nd->tunnel.remote_ip)))
                 return yaml_error(npp, node, error, "%s: 'local' and 'remote' must be of same IP family type", nd->id);
             break;
 
         default:
             if (!is_ip4_address(nd->tunnel.local_ip))
-                return yaml_error(npp, node, error, "%s: 'local' must be a valid IPv4 address for this tunnel type", nd->id);
+                return yaml_error(npp, node, error,
+                                  "%s: 'local' must be a valid IPv4 address "
+                                  "for this tunnel type",
+                                  nd->id);
             if (!is_ip4_address(nd->tunnel.remote_ip))
-                return yaml_error(npp, node, error, "%s: 'remote' must be a valid IPv4 address for this tunnel type", nd->id);
+                return yaml_error(npp, node, error,
+                                  "%s: 'remote' must be a valid IPv4 address "
+                                  "for this tunnel type",
+                                  nd->id);
             break;
     }
 
@@ -263,17 +277,21 @@ validate_tunnel_backend_rules(const NetplanParser* npp, NetplanNetDefinition* nd
                  *       systemd-networkd has grown ISATAP support in 918049a.
                  */
                 case NETPLAN_TUNNEL_MODE_ISATAP:
-                    return yaml_error(npp, node, error,
-                                      "%s: %s tunnel mode is not supported by networkd",
-                                      nd->id,
+                    return yaml_error(npp, node, error, "%s: %s tunnel mode is not supported by networkd", nd->id,
                                       g_ascii_strup(netplan_tunnel_mode_name(nd->tunnel.mode), -1));
                     break;
 
                 default:
                     if (nd->tunnel.input_key)
-                        return yaml_error(npp, node, error, "%s: 'input-key' is not required for this tunnel type", nd->id);
+                        return yaml_error(npp, node, error,
+                                          "%s: 'input-key' is not required for "
+                                          "this tunnel type",
+                                          nd->id);
                     if (nd->tunnel.output_key)
-                        return yaml_error(npp, node, error, "%s: 'output-key' is not required for this tunnel type", nd->id);
+                        return yaml_error(npp, node, error,
+                                          "%s: 'output-key' is not required "
+                                          "for this tunnel type",
+                                          nd->id);
                     break;
             }
             break;
@@ -287,22 +305,27 @@ validate_tunnel_backend_rules(const NetplanParser* npp, NetplanNetDefinition* nd
 
                 case NETPLAN_TUNNEL_MODE_GRETAP:
                 case NETPLAN_TUNNEL_MODE_IP6GRETAP:
-                    return yaml_error(npp, node, error,
-                                      "%s: %s tunnel mode is not supported by NetworkManager",
-                                      nd->id,
+                    return yaml_error(npp, node, error, "%s: %s tunnel mode is not supported by NetworkManager", nd->id,
                                       g_ascii_strup(netplan_tunnel_mode_name(nd->tunnel.mode), -1));
                     break;
 
                 default:
                     if (nd->tunnel.input_key)
-                        return yaml_error(npp, node, error, "%s: 'input-key' is not required for this tunnel type", nd->id);
+                        return yaml_error(npp, node, error,
+                                          "%s: 'input-key' is not required for "
+                                          "this tunnel type",
+                                          nd->id);
                     if (nd->tunnel.output_key)
-                        return yaml_error(npp, node, error, "%s: 'output-key' is not required for this tunnel type", nd->id);
+                        return yaml_error(npp, node, error,
+                                          "%s: 'output-key' is not required "
+                                          "for this tunnel type",
+                                          nd->id);
                     break;
             }
             break;
 
-        default: break; //LCOV_EXCL_LINE
+        default:
+            break; // LCOV_EXCL_LINE
     }
 
     return TRUE;
@@ -312,7 +335,7 @@ gboolean
 validate_netdef_grammar(const NetplanParser* npp, NetplanNetDefinition* nd, yaml_node_t* node, GError** error)
 {
     int missing_id_count = g_hash_table_size(npp->missing_id);
-    gboolean valid = FALSE;
+    gboolean valid       = FALSE;
 
     g_assert(nd->type != NETPLAN_DEF_TYPE_NONE);
 
@@ -336,20 +359,23 @@ validate_netdef_grammar(const NetplanParser* npp, NetplanNetDefinition* nd, yaml
         if (nd->vlan_id == G_MAXUINT)
             return yaml_error(npp, node, error, "%s: missing 'id' property", nd->id);
         if (nd->vlan_id > 4094)
-            return yaml_error(npp, node, error, "%s: invalid id '%u' (allowed values are 0 to 4094)", nd->id, nd->vlan_id);
+            return yaml_error(npp, node, error, "%s: invalid id '%u' (allowed values are 0 to 4094)", nd->id,
+                              nd->vlan_id);
     }
 
-    if (nd->type == NETPLAN_DEF_TYPE_TUNNEL &&
-        nd->tunnel.mode == NETPLAN_TUNNEL_MODE_VXLAN) {
+    if (nd->type == NETPLAN_DEF_TYPE_TUNNEL && nd->tunnel.mode == NETPLAN_TUNNEL_MODE_VXLAN) {
         if (nd->vxlan->vni == 0)
-            return yaml_error(npp, node, error,
-                              "%s: missing 'id' property (VXLAN VNI)", nd->id);
+            return yaml_error(npp, node, error, "%s: missing 'id' property (VXLAN VNI)", nd->id);
         if (nd->vxlan->vni < 1 || nd->vxlan->vni > 16777215)
-            return yaml_error(npp, node, error, "%s: VXLAN 'id' (VNI) "
-                              "must be in range [1..16777215]", nd->id);
+            return yaml_error(npp, node, error,
+                              "%s: VXLAN 'id' (VNI) "
+                              "must be in range [1..16777215]",
+                              nd->id);
         if (nd->vxlan->flow_label != G_MAXUINT && nd->vxlan->flow_label > 1048575)
-            return yaml_error(npp, node, error, "%s: VXLAN 'flow-label' "
-                              "must be in range [0..1048575]", nd->id);
+            return yaml_error(npp, node, error,
+                              "%s: VXLAN 'flow-label' "
+                              "must be in range [0..1048575]",
+                              nd->id);
     }
 
     if (nd->type == NETPLAN_DEF_TYPE_VRF) {
@@ -364,19 +390,30 @@ validate_netdef_grammar(const NetplanParser* npp, NetplanNetDefinition* nd, yaml
     }
 
     if (nd->ip6_addr_gen_mode != NETPLAN_ADDRGEN_DEFAULT && nd->ip6_addr_gen_token)
-        return yaml_error(npp, node, error, "%s: ipv6-address-generation and ipv6-address-token are mutually exclusive", nd->id);
+        return yaml_error(npp, node, error,
+                          "%s: ipv6-address-generation and ipv6-address-token "
+                          "are mutually exclusive",
+                          nd->id);
 
     if (nd->backend == NETPLAN_BACKEND_OVS) {
         // LCOV_EXCL_START
         if (!g_file_test(OPENVSWITCH_OVS_VSCTL, G_FILE_TEST_EXISTS)) {
             /* Tested via integration test */
-            return yaml_error(npp, node, error, "%s: The 'ovs-vsctl' tool is required to setup OpenVSwitch interfaces.", nd->id);
+            return yaml_error(npp, node, error,
+                              "%s: The 'ovs-vsctl' tool is required to setup "
+                              "OpenVSwitch interfaces.",
+                              nd->id);
         }
         // LCOV_EXCL_STOP
     }
 
-    if (nd->type == NETPLAN_DEF_TYPE_NM && (!nd->backend_settings.nm.passthrough || !g_datalist_get_data(&nd->backend_settings.nm.passthrough, "connection.type")))
-        return yaml_error(npp, node, error, "%s: network type 'nm-devices:' needs to provide a 'connection.type' via passthrough", nd->id);
+    if (nd->type == NETPLAN_DEF_TYPE_NM
+        && (!nd->backend_settings.nm.passthrough
+            || !g_datalist_get_data(&nd->backend_settings.nm.passthrough, "connection.type")))
+        return yaml_error(npp, node, error,
+                          "%s: network type 'nm-devices:' needs to provide a "
+                          "'connection.type' via passthrough",
+                          nd->id);
 
     valid = TRUE;
 
@@ -432,8 +469,7 @@ validate_sriov_rules(const NetplanParser* npp, NetplanNetDefinition* nd, GError*
                 }
             }
         }
-        gboolean eswitch_mode = (nd->embedded_switch_mode ||
-                                 nd->sriov_delay_virtual_functions_rebind);
+        gboolean eswitch_mode = (nd->embedded_switch_mode || nd->sriov_delay_virtual_functions_rebind);
         if (eswitch_mode && !is_sriov_pf) {
             valid = yaml_error(npp, node, error, "%s: This is not a SR-IOV PF", nd->id);
             goto sriov_rules_error;
@@ -446,15 +482,14 @@ sriov_rules_error:
 }
 
 gboolean
-adopt_and_validate_vrf_routes(const NetplanParser *npp, GHashTable *netdefs, GError **error)
+adopt_and_validate_vrf_routes(const NetplanParser* npp, GHashTable* netdefs, GError** error)
 {
     gpointer key, value;
     GHashTableIter iter;
 
-    g_hash_table_iter_init (&iter, netdefs);
-    while (g_hash_table_iter_next (&iter, &key, &value))
-    {
-        NetplanNetDefinition *nd = value;
+    g_hash_table_iter_init(&iter, netdefs);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        NetplanNetDefinition* nd = value;
         if (nd->type != NETPLAN_DEF_TYPE_VRF || !nd->routes)
             continue;
 
@@ -462,7 +497,9 @@ adopt_and_validate_vrf_routes(const NetplanParser *npp, GHashTable *netdefs, GEr
         for (size_t i = 0; i < nd->routes->len; i++) {
             NetplanIPRoute* r = g_array_index(nd->routes, NetplanIPRoute*, i);
             if (r->table == nd->vrf_table) {
-                g_debug("%s: Ignoring redundant routes table %d (matches VRF table)", nd->id, r->table);
+                g_debug("%s: Ignoring redundant routes table %d (matches VRF "
+                        "table)",
+                        nd->id, r->table);
                 continue;
             } else if (r->table != NETPLAN_ROUTE_TABLE_UNSPEC) {
                 g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
@@ -477,7 +514,9 @@ adopt_and_validate_vrf_routes(const NetplanParser *npp, GHashTable *netdefs, GEr
         for (size_t i = 0; i < nd->ip_rules->len; i++) {
             NetplanIPRule* r = g_array_index(nd->ip_rules, NetplanIPRule*, i);
             if (r->table == nd->vrf_table) {
-                g_debug("%s: Ignoring redundant routing-policy table %d (matches VRF table)", nd->id, r->table);
+                g_debug("%s: Ignoring redundant routing-policy table %d "
+                        "(matches VRF table)",
+                        nd->id, r->table);
                 continue;
             } else if (r->table != NETPLAN_ROUTE_TABLE_UNSPEC && r->table != nd->vrf_table) {
                 g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
@@ -496,12 +535,13 @@ struct _defroute_entry {
     int family;
     int table;
     int metric;
-    const char *netdef_id;
+    const char* netdef_id;
 };
 
 static void
-defroute_err(struct _defroute_entry *entry, const char *new_netdef_id, GError **error) {
-    char table_name[128] = {};
+defroute_err(struct _defroute_entry* entry, const char* new_netdef_id, GError** error)
+{
+    char table_name[128]  = {};
     char metric_name[128] = {};
 
     g_assert(entry->family == AF_INET || entry->family == AF_INET6);
@@ -518,57 +558,49 @@ defroute_err(struct _defroute_entry *entry, const char *new_netdef_id, GError **
         snprintf(metric_name, sizeof(metric_name) - 1, "metric: %d", entry->metric);
 
     g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-            "Conflicting default route declarations for %s (%s, %s), first declared in %s but also in %s",
-            (entry->family == AF_INET) ? "IPv4" : "IPv6",
-            table_name,
-            metric_name,
-            entry->netdef_id,
-            new_netdef_id);
+                "Conflicting default route declarations for %s (%s, %s), first "
+                "declared in %s but also in %s",
+                (entry->family == AF_INET) ? "IPv4" : "IPv6", table_name, metric_name, entry->netdef_id, new_netdef_id);
 }
 
 static gboolean
-check_defroute(struct _defroute_entry *candidate,
-               GSList **entries,
-               GError **error)
+check_defroute(struct _defroute_entry* candidate, GSList** entries, GError** error)
 {
-    struct _defroute_entry *entry;
-    GSList *it;
+    struct _defroute_entry* entry;
+    GSList* it;
 
     g_assert(entries != NULL);
     it = *entries;
 
     while (it) {
-        struct _defroute_entry *e = it->data;
-        if (e->family == candidate->family &&
-                e->table == candidate->table &&
-                e->metric == candidate->metric) {
+        struct _defroute_entry* e = it->data;
+        if (e->family == candidate->family && e->table == candidate->table && e->metric == candidate->metric) {
             defroute_err(e, candidate->netdef_id, error);
             return FALSE;
         }
         it = it->next;
     }
-    entry = g_malloc(sizeof(*entry));
-    *entry = *candidate;
+    entry    = g_malloc(sizeof(*entry));
+    *entry   = *candidate;
     *entries = g_slist_prepend(*entries, entry);
     return TRUE;
 }
 
 gboolean
-validate_default_route_consistency(const NetplanParser* npp, GHashTable *netdefs, GError ** error)
+validate_default_route_consistency(const NetplanParser* npp, GHashTable* netdefs, GError** error)
 {
     struct _defroute_entry candidate = {};
-    GSList *defroutes = NULL;
-    gboolean ret = TRUE;
+    GSList* defroutes                = NULL;
+    gboolean ret                     = TRUE;
     gpointer key, value;
     GHashTableIter iter;
 
-    g_hash_table_iter_init (&iter, netdefs);
-    while (g_hash_table_iter_next (&iter, &key, &value))
-    {
-        NetplanNetDefinition *nd = value;
-        candidate.netdef_id = key;
-        candidate.metric = NETPLAN_METRIC_UNSPEC;
-        candidate.table = NETPLAN_ROUTE_TABLE_UNSPEC;
+    g_hash_table_iter_init(&iter, netdefs);
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        NetplanNetDefinition* nd = value;
+        candidate.netdef_id      = key;
+        candidate.metric         = NETPLAN_METRIC_UNSPEC;
+        candidate.table          = NETPLAN_ROUTE_TABLE_UNSPEC;
         if (nd->gateway4) {
             candidate.family = AF_INET;
             if (!check_defroute(&candidate, &defroutes, error)) {
@@ -589,10 +621,10 @@ validate_default_route_consistency(const NetplanParser* npp, GHashTable *netdefs
 
         for (size_t i = 0; i < nd->routes->len; i++) {
             NetplanIPRoute* r = g_array_index(nd->routes, NetplanIPRoute*, i);
-            char *suffix = strrchr(r->to, '/');
+            char* suffix      = strrchr(r->to, '/');
             if (g_strcmp0(suffix, "/0") == 0 || g_strcmp0(r->to, "default") == 0) {
                 candidate.family = r->family;
-                candidate.table = r->table;
+                candidate.table  = r->table;
                 candidate.metric = r->metric;
                 if (!check_defroute(&candidate, &defroutes, error)) {
                     ret = FALSE;

@@ -30,8 +30,8 @@ void
 test_netplan_parser_load_yaml(void** state)
 {
     const char* filename = FIXTURESDIR "/ovs.yaml";
-    GError *error = NULL;
-    NetplanParser* npp = netplan_parser_new();
+    GError* error        = NULL;
+    NetplanParser* npp   = netplan_parser_new();
 
     gboolean res = netplan_parser_load_yaml(npp, filename, &error);
 
@@ -44,7 +44,7 @@ void
 test_netplan_parser_interface_has_bridge_netdef(void** state)
 {
 
-    NetplanState *np_state = load_fixture_to_netplan_state("bridge.yaml");
+    NetplanState* np_state = load_fixture_to_netplan_state("bridge.yaml");
 
     NetplanNetDefinition* interface = netplan_state_get_netdef(np_state, "enp3s0");
 
@@ -56,7 +56,6 @@ test_netplan_parser_interface_has_bridge_netdef(void** state)
     assert_ptr_equal(interface->bridge_link, bridge);
 
     netplan_state_clear(&np_state);
-
 }
 
 void
@@ -75,7 +74,6 @@ test_netplan_parser_interface_has_bond_netdef(void** state)
     assert_ptr_equal(interface->bond_link, bond);
 
     netplan_state_clear(&np_state);
-
 }
 
 void
@@ -87,7 +85,7 @@ test_netplan_parser_interface_has_peer_netdef(void** state)
     NetplanNetDefinition* patch0 = netplan_state_get_netdef(np_state, "patch0-1");
 
     NetplanNetDefinition* patch1 = netplan_netdef_get_peer_link(patch0);
-    patch0 = netplan_netdef_get_peer_link(patch1);
+    patch0                       = netplan_netdef_get_peer_link(patch1);
 
     assert_non_null(patch0);
     assert_non_null(patch1);
@@ -131,15 +129,14 @@ int
 main()
 {
 
-       const struct CMUnitTest tests[] = {
-           cmocka_unit_test(test_netplan_parser_new_parser),
-           cmocka_unit_test(test_netplan_parser_load_yaml),
-           cmocka_unit_test(test_netplan_parser_interface_has_bridge_netdef),
-           cmocka_unit_test(test_netplan_parser_interface_has_bond_netdef),
-           cmocka_unit_test(test_netplan_parser_interface_has_peer_netdef),
-           cmocka_unit_test(test_netplan_parser_sriov_embedded_switch),
-       };
+    const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_netplan_parser_new_parser),
+        cmocka_unit_test(test_netplan_parser_load_yaml),
+        cmocka_unit_test(test_netplan_parser_interface_has_bridge_netdef),
+        cmocka_unit_test(test_netplan_parser_interface_has_bond_netdef),
+        cmocka_unit_test(test_netplan_parser_interface_has_peer_netdef),
+        cmocka_unit_test(test_netplan_parser_sriov_embedded_switch),
+    };
 
-       return cmocka_run_group_tests(tests, setup, tear_down);
-
+    return cmocka_run_group_tests(tests, setup, tear_down);
 }

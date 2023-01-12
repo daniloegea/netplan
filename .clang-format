@@ -1,0 +1,36 @@
+---
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+# Custom values
+Language:        Cpp
+BasedOnStyle: GNU
+IndentWidth:     4
+ColumnLimit:     120
+SortIncludes:    false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+DerivePointerAlignment: true
+PointerAlignment: Left
+IndentCaseLabels: true
+IndentCaseBlocks: true
+SpaceAfterCStyleCast: true
+InsertTrailingCommas: None
+BreakBeforeBinaryOperators: NonAssignment
+ContinuationIndentWidth: 4
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: false
+  AfterFunctionDefinitionName: false
+  AfterFunctionDeclarationName: false
+  AfterIfMacros:   false
+  AfterRequiresInClause: false
+  AfterRequiresInExpression: false
+  BeforeNonEmptyParentheses: false
+Cpp11BracedListStyle: true
+AlignConsecutiveAssignments:
+  Enabled:         true
+  AcrossEmptyLines: false
+  AcrossComments:  false
+  AlignCompound:   false
+  PadOperators:    true

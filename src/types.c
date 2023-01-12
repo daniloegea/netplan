@@ -24,13 +24,17 @@
 #include "types-internal.h"
 #include "util-internal.h"
 
-#define FREE_AND_NULLIFY(ptr) { g_free(ptr); ptr = NULL; }
+#define FREE_AND_NULLIFY(ptr)                                                                                          \
+    {                                                                                                                  \
+        g_free(ptr);                                                                                                   \
+        ptr = NULL;                                                                                                    \
+    }
 
 /* Helper function to free a GArray after applying a destructor to its
  * elements. Note that in the most trivial case (g_free) we should probably
  * have used a GPtrArray directly... */
 static void
-free_garray_with_destructor(GArray** array, void (destructor)(void *))
+free_garray_with_destructor(GArray** array, void(destructor)(void*))
 {
     if (*array) {
         for (size_t i = 0; i < (*array)->len; ++i) {
@@ -42,10 +46,11 @@ free_garray_with_destructor(GArray** array, void (destructor)(void *))
     }
 }
 
-/* Helper function to free a GHashTable after applying a simple destructor to its
- * elements. */
+/* Helper function to free a GHashTable after applying a simple destructor to
+ * its elements. */
 static void
-free_hashtable_with_destructor(GHashTable** hash, void (destructor)(void *)) {
+free_hashtable_with_destructor(GHashTable** hash, void(destructor)(void*))
+{
     if (*hash) {
         GHashTableIter iter;
         gpointer key, value;
@@ -113,14 +118,14 @@ reset_auth_settings(NetplanAuthenticationSettings* auth)
     FREE_AND_NULLIFY(auth->client_key_password);
     FREE_AND_NULLIFY(auth->phase2_auth);
     auth->key_management = NETPLAN_AUTH_KEY_MANAGEMENT_NONE;
-    auth->eap_method = NETPLAN_AUTH_EAP_NONE;
+    auth->eap_method     = NETPLAN_AUTH_EAP_NONE;
 }
 
 void
 reset_ovs_settings(NetplanOVSSettings* settings)
 {
     settings->mcast_snooping = FALSE;
-    settings->rstp = FALSE;
+    settings->rstp           = FALSE;
 
     free_hashtable_with_destructor(&settings->external_ids, g_free);
     free_hashtable_with_destructor(&settings->other_config, g_free);
@@ -140,11 +145,11 @@ reset_dhcp_overrides(NetplanDHCPOverrides* overrides)
 {
     overrides->use_dns = TRUE;
     FREE_AND_NULLIFY(overrides->use_domains);
-    overrides->use_ntp = TRUE;
+    overrides->use_ntp       = TRUE;
     overrides->send_hostname = TRUE;
-    overrides->use_hostname = TRUE;
-    overrides->use_mtu = TRUE;
-    overrides->use_routes = TRUE;
+    overrides->use_hostname  = TRUE;
+    overrides->use_mtu       = TRUE;
+    overrides->use_routes    = TRUE;
     FREE_AND_NULLIFY(overrides->hostname);
     overrides->metric = NETPLAN_METRIC_UNSPEC;
 }
@@ -152,15 +157,15 @@ reset_dhcp_overrides(NetplanDHCPOverrides* overrides)
 void
 reset_ip_rule(NetplanIPRule* ip_rule)
 {
-    ip_rule->family = G_MAXUINT; /* 0 is a valid family ID */
+    ip_rule->family   = G_MAXUINT; /* 0 is a valid family ID */
     ip_rule->priority = NETPLAN_IP_RULE_PRIO_UNSPEC;
-    ip_rule->table = NETPLAN_ROUTE_TABLE_UNSPEC;
-    ip_rule->tos = NETPLAN_IP_RULE_TOS_UNSPEC;
-    ip_rule->fwmark = NETPLAN_IP_RULE_FW_MARK_UNSPEC;
+    ip_rule->table    = NETPLAN_ROUTE_TABLE_UNSPEC;
+    ip_rule->tos      = NETPLAN_IP_RULE_TOS_UNSPEC;
+    ip_rule->fwmark   = NETPLAN_IP_RULE_FW_MARK_UNSPEC;
 }
 
-/* Reset a backend settings object. The caller needs to specify the actual backend as it is not
- * contained within the object itself! */
+/* Reset a backend settings object. The caller needs to specify the actual
+ * backend as it is not contained within the object itself! */
 static void
 reset_backend_settings(NetplanBackendSettings* settings, NetplanBackend backend)
 {
@@ -181,7 +186,8 @@ reset_backend_settings(NetplanBackendSettings* settings, NetplanBackend backend)
 }
 
 static void
-reset_private_netdef_data(struct private_netdef_data* data) {
+reset_private_netdef_data(struct private_netdef_data* data)
+{
     if (!data)
         return;
     if (data->dirty_fields)
@@ -195,8 +201,8 @@ reset_vxlan(NetplanVxlan* vxlan)
     if (!vxlan)
         return;
     memset(vxlan, 0, sizeof(NetplanVxlan));
-    vxlan->link = NULL;
-    vxlan->flow_label = G_MAXUINT;
+    vxlan->link            = NULL;
+    vxlan->flow_label      = G_MAXUINT;
     vxlan->do_not_fragment = NETPLAN_TRISTATE_UNSET;
 }
 
@@ -204,8 +210,9 @@ reset_vxlan(NetplanVxlan* vxlan)
  * Signature made to match the g_hash_table_foreach function.
  * @key: ignored
  * @value: pointer to a heap-allocated NetlpanWifiAccessPoint object
- * @data: pointer to a NetplanBackend value representing the renderer context in which
- *        to interpret the processed object, especially regarding the backend settings
+ * @data: pointer to a NetplanBackend value representing the renderer context in
+ * which to interpret the processed object, especially regarding the backend
+ * settings
  */
 static void
 free_access_point(void* key, void* value, void* data)
@@ -214,24 +221,26 @@ free_access_point(void* key, void* value, void* data)
     g_free(ap->ssid);
     g_free(ap->bssid);
     reset_auth_settings(&ap->auth);
-    reset_backend_settings(&ap->backend_settings, *((NetplanBackend *)data));
+    reset_backend_settings(&ap->backend_settings, *((NetplanBackend*) data));
     g_free(ap);
 }
 
-/* Reset a given network definition to its initial state, releasing any owned data */
+/* Reset a given network definition to its initial state, releasing any owned
+ * data */
 void
-reset_netdef(NetplanNetDefinition* netdef, NetplanDefType new_type, NetplanBackend new_backend) {
+reset_netdef(NetplanNetDefinition* netdef, NetplanDefType new_type, NetplanBackend new_backend)
+{
     /* Needed for some cleanups down the line */
     NetplanBackend backend = netdef->backend;
 
-    netdef->type = new_type;
+    netdef->type    = new_type;
     netdef->backend = new_backend;
     FREE_AND_NULLIFY(netdef->id);
     memset(netdef->uuid, 0, sizeof(netdef->uuid));
 
-    netdef->optional = FALSE;
+    netdef->optional           = FALSE;
     netdef->optional_addresses = 0;
-    netdef->critical = FALSE;
+    netdef->critical           = FALSE;
 
     netdef->dhcp4 = FALSE;
     netdef->dhcp6 = FALSE;
@@ -246,7 +255,7 @@ reset_netdef(NetplanNetDefinition* netdef, NetplanDefType new_type, NetplanBacke
     free_garray_with_destructor(&netdef->ip6_addresses, g_free);
     free_garray_with_destructor(&netdef->address_options, free_address_options);
 
-    netdef->ip6_privacy = FALSE;
+    netdef->ip6_privacy       = FALSE;
     netdef->ip6_addr_gen_mode = NETPLAN_ADDRGEN_DEFAULT;
     FREE_AND_NULLIFY(netdef->ip6_addr_gen_token);
 
@@ -267,28 +276,28 @@ reset_netdef(NetplanNetDefinition* netdef, NetplanDefType new_type, NetplanBacke
     FREE_AND_NULLIFY(netdef->bond);
     FREE_AND_NULLIFY(netdef->peer);
     netdef->bridge_link = NULL;
-    netdef->bond_link = NULL;
-    netdef->peer_link = NULL;
+    netdef->bond_link   = NULL;
+    netdef->peer_link   = NULL;
 
-    netdef->vlan_id = G_MAXUINT; /* 0 is a valid ID */
+    netdef->vlan_id   = G_MAXUINT; /* 0 is a valid ID */
     netdef->vlan_link = NULL;
     netdef->has_vlans = FALSE;
 
-    netdef->vrf_link = NULL;
+    netdef->vrf_link  = NULL;
     netdef->vrf_table = G_MAXUINT;
 
     FREE_AND_NULLIFY(netdef->set_mac);
-    netdef->mtubytes = 0;
+    netdef->mtubytes      = 0;
     netdef->ipv6_mtubytes = 0;
 
     FREE_AND_NULLIFY(netdef->set_name);
     FREE_AND_NULLIFY(netdef->match.driver);
     FREE_AND_NULLIFY(netdef->match.mac);
     FREE_AND_NULLIFY(netdef->match.original_name);
-    netdef->has_match = FALSE;
+    netdef->has_match   = FALSE;
     netdef->wake_on_lan = FALSE;
-    netdef->wowlan = 0;
-    netdef->emit_lldp = FALSE;
+    netdef->wowlan      = 0;
+    netdef->emit_lldp   = FALSE;
 
     if (netdef->access_points) {
         g_hash_table_foreach(netdef->access_points, free_access_point, &backend);
@@ -347,8 +356,8 @@ reset_netdef(NetplanNetDefinition* netdef, NetplanDefType new_type, NetplanBacke
     reset_auth_settings(&netdef->auth);
     netdef->has_auth = FALSE;
 
-    netdef->sriov_link = NULL;
-    netdef->sriov_vlan_filter = FALSE;
+    netdef->sriov_link              = NULL;
+    netdef->sriov_vlan_filter       = FALSE;
     netdef->sriov_explicit_vf_count = G_MAXUINT; /* 0 is a valid number of VFs */
     FREE_AND_NULLIFY(netdef->embedded_switch_mode);
 
@@ -360,32 +369,32 @@ reset_netdef(NetplanNetDefinition* netdef, NetplanDefType new_type, NetplanBacke
     FREE_AND_NULLIFY(netdef->activation_mode);
     netdef->ignore_carrier = FALSE;
 
-    netdef->receive_checksum_offload = FALSE;
-    netdef->transmit_checksum_offload = FALSE;
-    netdef->tcp_segmentation_offload = FALSE;
-    netdef->tcp6_segmentation_offload = FALSE;
+    netdef->receive_checksum_offload     = FALSE;
+    netdef->transmit_checksum_offload    = FALSE;
+    netdef->tcp_segmentation_offload     = FALSE;
+    netdef->tcp6_segmentation_offload    = FALSE;
     netdef->generic_segmentation_offload = FALSE;
-    netdef->generic_receive_offload = FALSE;
-    netdef->large_receive_offload = FALSE;
+    netdef->generic_receive_offload      = FALSE;
+    netdef->large_receive_offload        = FALSE;
 
     reset_private_netdef_data(netdef->_private);
     FREE_AND_NULLIFY(netdef->_private);
 
-    netdef->receive_checksum_offload = NETPLAN_TRISTATE_UNSET;
-    netdef->transmit_checksum_offload = NETPLAN_TRISTATE_UNSET;
-    netdef->tcp_segmentation_offload = NETPLAN_TRISTATE_UNSET;
-    netdef->tcp6_segmentation_offload = NETPLAN_TRISTATE_UNSET;
+    netdef->receive_checksum_offload     = NETPLAN_TRISTATE_UNSET;
+    netdef->transmit_checksum_offload    = NETPLAN_TRISTATE_UNSET;
+    netdef->tcp_segmentation_offload     = NETPLAN_TRISTATE_UNSET;
+    netdef->tcp6_segmentation_offload    = NETPLAN_TRISTATE_UNSET;
     netdef->generic_segmentation_offload = NETPLAN_TRISTATE_UNSET;
-    netdef->generic_receive_offload = NETPLAN_TRISTATE_UNSET;
-    netdef->large_receive_offload = NETPLAN_TRISTATE_UNSET;
+    netdef->generic_receive_offload      = NETPLAN_TRISTATE_UNSET;
+    netdef->large_receive_offload        = NETPLAN_TRISTATE_UNSET;
 
     netdef->ib_mode = NETPLAN_IB_MODE_KERNEL;
 }
 
 void
-clear_netdef_from_list(void *def)
+clear_netdef_from_list(void* def)
 {
-    reset_netdef((NetplanNetDefinition *)def, NETPLAN_DEF_TYPE_NONE, NETPLAN_BACKEND_NONE);
+    reset_netdef((NetplanNetDefinition*) def, NETPLAN_DEF_TYPE_NONE, NETPLAN_BACKEND_NONE);
     g_free(def);
 }
 
@@ -402,7 +411,7 @@ netplan_state_clear(NetplanState** np_state_p)
 {
     g_assert(np_state_p);
     NetplanState* np_state = *np_state_p;
-    *np_state_p = NULL;
+    *np_state_p            = NULL;
     netplan_state_reset(np_state);
     g_free(np_state);
 }
@@ -412,17 +421,18 @@ netplan_state_reset(NetplanState* np_state)
 {
     g_assert(np_state != NULL);
 
-    /* As stated in the netplan_state definition, netdefs_ordered is the collection
-     * owning the allocated definitions, whereas netdefs only has "weak" pointers.
-     * As such, we can destroy it without having to worry about freeing memory.
+    /* As stated in the netplan_state definition, netdefs_ordered is the
+     * collection owning the allocated definitions, whereas netdefs only has
+     * "weak" pointers. As such, we can destroy it without having to worry about
+     * freeing memory.
      */
-    if(np_state->netdefs) {
+    if (np_state->netdefs) {
         g_hash_table_destroy(np_state->netdefs);
         np_state->netdefs = NULL;
     }
 
     /* Here on the contrary we have to release the memory */
-    if(np_state->netdefs_ordered) {
+    if (np_state->netdefs_ordered) {
         g_clear_list(&np_state->netdefs_ordered, clear_netdef_from_list);
         np_state->netdefs_ordered = NULL;
     }
@@ -461,14 +471,16 @@ access_point_clear(NetplanWifiAccessPoint** ap, NetplanBackend backend)
     free_access_point(NULL, obj, &backend);
 }
 
-#define CLEAR_FROM_FREE(free_fn, clear_fn, type) void clear_fn(type** dest) \
-{ \
-    type* obj; \
-    if (!dest || !(*dest)) return; \
-    obj = *dest; \
-    *dest = NULL; \
-    free_fn(obj);\
-}
+#define CLEAR_FROM_FREE(free_fn, clear_fn, type)                                                                       \
+    void clear_fn(type** dest)                                                                                         \
+    {                                                                                                                  \
+        type* obj;                                                                                                     \
+        if (!dest || !(*dest))                                                                                         \
+            return;                                                                                                    \
+        obj   = *dest;                                                                                                 \
+        *dest = NULL;                                                                                                  \
+        free_fn(obj);                                                                                                  \
+    }
 
 CLEAR_FROM_FREE(free_wireguard_peer, wireguard_peer_clear, NetplanWireguardPeer);
 CLEAR_FROM_FREE(free_ip_rules, ip_rule_clear, NetplanIPRule);
@@ -556,8 +568,8 @@ netplan_netdef_get_peer_link(const NetplanNetDefinition* netdef)
 gboolean
 netplan_state_has_nondefault_globals(const NetplanState* np_state)
 {
-        return (np_state->backend != NETPLAN_BACKEND_NONE)
-                || has_openvswitch(&np_state->ovs_settings, NETPLAN_BACKEND_NONE, NULL);
+    return (np_state->backend != NETPLAN_BACKEND_NONE)
+           || has_openvswitch(&np_state->ovs_settings, NETPLAN_BACKEND_NONE, NULL);
 }
 
 ssize_t
