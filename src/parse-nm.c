@@ -662,6 +662,16 @@ netplan_parser_load_keyfile(NetplanParser* npp, const char* filename, GError** e
         parse_tunnels(kf, nd);
     }
 
+    /* Handle interfaces that are member of bonds, bridges, etc. */
+    gchar* member_type = g_key_file_get_string(kf, "connection", "slave-type", NULL);
+    if (member_type) {
+        if (!g_strcmp0(member_type, "bond")) {
+            nd->bond = g_key_file_get_string(kf, "connection", "master", NULL);
+            _kf_clear_key(kf, "connection", "slave-type");
+            _kf_clear_key(kf, "connection", "master");
+        }
+    }
+
     /* remove supported values from passthrough, which have been handled */
     if (   nd_type == NETPLAN_DEF_TYPE_ETHERNET
         || nd_type == NETPLAN_DEF_TYPE_WIFI
