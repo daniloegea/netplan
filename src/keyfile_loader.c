@@ -26,14 +26,9 @@
 #include <glib-object.h>
 #include <gio/gio.h>
 
-#include "util.h"
+#include "types.h"
 #include "util-internal.h"
 #include "parse.h"
-#include "names.h"
-#include "networkd.h"
-#include "nm.h"
-#include "openvswitch.h"
-#include "sriov.h"
 #include "netplan.h"
 #include "parse-nm.h"
 
@@ -52,7 +47,6 @@ int main(int argc, char** argv)
     GOptionContext* opt_context;
     int error_code = 0;
     NetplanParser* npp = NULL;
-    NetplanParser* keyfile_npp = NULL;
     NetplanState* np_state = NULL;
 
     /* Parse CLI options */
@@ -75,25 +69,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    keyfile_npp = netplan_parser_new();
-
-    netplan_parser_load_keyfile(keyfile_npp, keyfile_path, &error);
-
-    if (error) {
-        printf("load keyfile error\n");
-        goto cleanup;
-    }
-
-    if (g_hash_table_size(keyfile_npp->parsed_defs) == 0)
-        goto cleanup;
-
-    GHashTableIter iter;
-    gpointer key, value;
-
-    g_hash_table_iter_init(&iter, keyfile_npp->parsed_defs);
-    g_hash_table_iter_next(&iter, &key, &value);
-    NetplanNetDefinition* keyfile_netdef = value;
- 
+    /* Instantiate a new parser and load the YAML hierarchy from rootdir */
     npp = netplan_parser_new();
     netplan_parser_load_yaml_hierarchy(npp, rootdir, &error);
 
@@ -102,6 +78,7 @@ int main(int argc, char** argv)
         goto cleanup;
     }
 
+    /* Load the keyfile into the current netplan hierarchy */
     netplan_parser_load_keyfile(npp, keyfile_path, &error);
 
     if (error) {
@@ -109,25 +86,45 @@ int main(int argc, char** argv)
         goto cleanup;
     }
 
-    NetplanNetDefinition* netdef = g_hash_table_lookup(npp->parsed_defs, keyfile_netdef->id);
+    /* Retrieve the netdef created from the keyfile */
+    GList* last = g_list_last(npp->ordered);
+    NetplanNetDefinition* netdef = last->data;
 
+    /*
+     * When adding a non-(bond|bridge) interface, tries to find the link
+     * to the parent interface and add it to the _link pointer.
+     *
+     * With this, the interface will be added to the "interfaces" list when
+     * the YAML is emitted.
+     *
+     */
 
-    g_hash_table_iter_init(&iter, npp->parsed_defs);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        NetplanNetDefinition* n = value;
-
-        if (n->bond) {
-            if (g_strcmp0(n->bond, netdef->id)) {
-                n->bond_link = netdef;
-            }
+    if (netdef->bond) {
+        NetplanNetDefinition* bond = g_hash_table_lookup(npp->parsed_defs, netdef->bond);
+        if (bond) {
+            netdef->bond_link = bond;
         }
-
     }
+
+    if (netdef->bridge) {
+        NetplanNetDefinition* bridge = g_hash_table_lookup(npp->parsed_defs, netdef->bridge);
+        if (bridge) {
+            netdef->bridge_link = bridge;
+        }
+    }
+
+    /* Determine the output file name */
+    gchar* filename;
+    if (netdef->backend_settings.uuid)
+        filename = g_strconcat("90-NM-", netdef->backend_settings.uuid, ".yaml", NULL);
+    else
+        filename = g_strconcat("10-netplan-", netdef->id, ".yaml", NULL);
 
     np_state = netplan_state_new();
     netplan_state_import_parser_results(np_state, npp, &error);
 
-    netplan_state_update_yaml_hierarchy(np_state, "70-filename.yaml", rootdir, &error);
+    /* Update and save the new state containing the interface read from the keyfile */
+    netplan_state_update_yaml_hierarchy(np_state, filename, rootdir, &error);
 
 cleanup:
     g_option_context_free(opt_context);
