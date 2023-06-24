@@ -188,6 +188,7 @@ add_missing_node(NetplanParser *npp, const yaml_node_t* node)
     missing = g_new0(NetplanMissingNode, 1);
     missing->netdef_id = npp->current.netdef->id;
     missing->node = node;
+    missing->missing = g_strdup(scalar(node));
 
     g_debug("recording missing yaml_node_t %s", scalar(node));
     g_hash_table_insert(npp->missing_id, (gpointer)scalar(node), missing);
@@ -3233,6 +3234,29 @@ process_missing_ids(NetplanParser* npp, GError** error)
             netdef->vlan_link = netplan_netdef_new(npp, scalar(missing->node), NETPLAN_DEF_TYPE_NM_PLACEHOLDER_, NETPLAN_BACKEND_NM);
             g_hash_table_iter_remove(&iter);
         }
+
+        /* BOND case: look for bond members that were missed because they showed up _after_ the bond */
+        if (netdef->type == NETPLAN_DEF_TYPE_BOND) {
+            NetplanNetDefinition* member = g_hash_table_lookup(npp->parsed_defs, missing->missing);
+
+            if (member) {
+                member->bond_link = netdef;
+                member->bond = g_strdup(netdef->id);
+                g_hash_table_iter_remove(&iter);
+            }
+        }
+
+        /* BRIDGE case: look for bridge members that were missed because they showed up _after_ the bridge */
+        if (netdef->type == NETPLAN_DEF_TYPE_BRIDGE) {
+            NetplanNetDefinition* member = g_hash_table_lookup(npp->parsed_defs, missing->missing);
+
+            if (member) {
+                member->bridge_link = netdef;
+                member->bridge = g_strdup(netdef->id);
+                g_hash_table_iter_remove(&iter);
+            }
+        }
+
     }
 }
 
@@ -3246,8 +3270,9 @@ process_document(NetplanParser* npp, GError** error)
     int previously_found;
     int still_missing;
 
-    g_assert(npp->missing_id == NULL);
-    npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+    //g_assert(npp->missing_id == NULL);
+    if (!npp->missing_id)
+        npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
 
     do {
         g_debug("starting new processing pass");
@@ -3271,6 +3296,7 @@ process_document(NetplanParser* npp, GError** error)
 
     process_missing_ids(npp, error);
 
+    return ret;
     if (g_hash_table_size(npp->missing_id) > 0) {
         GHashTableIter iter;
         gpointer key, value;

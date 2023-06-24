@@ -670,6 +670,12 @@ netplan_parser_load_keyfile(NetplanParser* npp, const char* filename, GError** e
             _kf_clear_key(kf, "connection", "slave-type");
             _kf_clear_key(kf, "connection", "master");
         }
+
+        if (!g_strcmp0(member_type, "bridge")) {
+            nd->bridge = g_key_file_get_string(kf, "connection", "master", NULL);
+            _kf_clear_key(kf, "connection", "slave-type");
+            _kf_clear_key(kf, "connection", "master");
+        }
     }
 
     /* remove supported values from passthrough, which have been handled */
