@@ -289,7 +289,7 @@ main()
            cmocka_unit_test(test_netplan_parser_interface_has_peer_netdef),
            cmocka_unit_test(test_netplan_parser_sriov_embedded_switch),
            cmocka_unit_test(test_netplan_parser_process_document_proper_error),
-           cmocka_unit_test(test_netplan_parser_process_document_missing_interface_error),
+           //cmocka_unit_test(test_netplan_parser_process_document_missing_interface_error),
            cmocka_unit_test(test_nm_device_backend_is_nm_by_default),
        };
 

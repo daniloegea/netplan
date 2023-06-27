@@ -3271,8 +3271,8 @@ process_document(NetplanParser* npp, GError** error)
     int still_missing;
 
     //g_assert(npp->missing_id == NULL);
-    if (!npp->missing_id)
-        npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+    //if (!npp->missing_id)
+    //    npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
 
     do {
         g_debug("starting new processing pass");
@@ -3294,7 +3294,7 @@ process_document(NetplanParser* npp, GError** error)
     if (error && *error)
         goto cleanup;
 
-    process_missing_ids(npp, error);
+    //process_missing_ids(npp, error);
 
     return ret;
     if (g_hash_table_size(npp->missing_id) > 0) {

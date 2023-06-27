@@ -658,9 +658,61 @@ netplan_netdef_get_output_filename(const NetplanNetDefinition* netdef, const cha
     return 0;
 }
 
+/*
+ * Post-process some specific missing interfaces that are not required
+ * to exist but are needed in order to generate backend configuration.
+ */
+static void
+process_missing_ids(NetplanParser* npp, GError** error)
+{
+    GHashTableIter iter;
+    gpointer key, value;
+
+    if (g_hash_table_size(npp->missing_id) == 0)
+        return;
+
+    g_hash_table_iter_init(&iter, npp->missing_id);
+
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        NetplanMissingNode* missing = (NetplanMissingNode*) value;
+        NetplanNetDefinition* netdef = g_hash_table_lookup(npp->parsed_defs, missing->netdef_id);
+        NetplanBackend backend = netdef->backend != NETPLAN_BACKEND_NONE ? NETPLAN_BACKEND_NM : npp->global_backend;
+
+        /* VLAN case: NetworkManager doesn't enforce the existence of a parent interface in order to
+         * create a VLAN.
+         */
+        if (netdef->type == NETPLAN_DEF_TYPE_VLAN && backend == NETPLAN_BACKEND_NM) {
+            netdef->vlan_link = netplan_netdef_new(npp, missing->missing, NETPLAN_DEF_TYPE_NM_PLACEHOLDER_, NETPLAN_BACKEND_NM);
+            g_hash_table_iter_remove(&iter);
+        }
+        /* BOND case: look for bond members that were missed because they showed up _after_ the bond */
+        else if (netdef->type == NETPLAN_DEF_TYPE_BOND) {
+            NetplanNetDefinition* member = g_hash_table_lookup(npp->parsed_defs, missing->missing);
+
+            if (member) {
+                member->bond_link = netdef;
+                member->bond = g_strdup(netdef->id);
+                g_hash_table_iter_remove(&iter);
+            }
+        }
+        /* BRIDGE case: look for bridge members that were missed because they showed up _after_ the bridge */
+        else if (netdef->type == NETPLAN_DEF_TYPE_BRIDGE) {
+            NetplanNetDefinition* member = g_hash_table_lookup(npp->parsed_defs, missing->missing);
+
+            if (member) {
+                member->bridge_link = netdef;
+                member->bridge = g_strdup(netdef->id);
+                g_hash_table_iter_remove(&iter);
+            }
+        }
+    }
+}
+
+
 gboolean
 netplan_parser_load_yaml_hierarchy(NetplanParser* npp, const char* rootdir, GError** error)
 {
+    gboolean ret = TRUE;
     glob_t gl;
     /* Files with asciibetically higher names override/append settings from
      * earlier ones (in all config dirs); files in /run/netplan/
@@ -674,6 +726,10 @@ netplan_parser_load_yaml_hierarchy(NetplanParser* npp, const char* rootdir, GErr
     g_autoptr(GHashTable) configs = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
     g_autoptr(GList) config_keys = NULL;
 
+    g_assert(npp->missing_id == NULL);
+    if (!npp->missing_id)
+        npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
+
     for (size_t i = 0; i < gl.gl_pathc; ++i)
         g_hash_table_insert(configs, g_path_get_basename(gl.gl_pathv[i]), gl.gl_pathv[i]);
 
@@ -682,10 +738,36 @@ netplan_parser_load_yaml_hierarchy(NetplanParser* npp, const char* rootdir, GErr
     for (GList* i = config_keys; i != NULL; i = i->next)
         if (!netplan_parser_load_yaml(npp, g_hash_table_lookup(configs, i->data), error)) {
             globfree(&gl);
-            return FALSE;
+            ret = FALSE;
+            goto cleanup;
         }
+
+    process_missing_ids(npp, error);
+
+    if (g_hash_table_size(npp->missing_id) > 0) {
+        GHashTableIter iter;
+        gpointer key, value;
+        NetplanMissingNode *missing;
+
+        g_clear_error(error);
+
+        /* Get the first missing identifier we can get from our list, to
+         * approximate early failure and give the user a meaningful error. */
+        g_hash_table_iter_init (&iter, npp->missing_id);
+        g_hash_table_iter_next (&iter, &key, &value);
+        missing = (NetplanMissingNode*) value;
+
+        g_set_error(error, NETPLAN_VALIDATION_ERROR, NETPLAN_ERROR_CONFIG_GENERIC,
+                    "%s: Error in network definition: interface '%s' is not defined", missing->netdef_id, missing->missing);
+        goto cleanup;
+    }
+
+
+cleanup:
+    g_hash_table_destroy(npp->missing_id);
+    npp->missing_id = NULL;
     globfree(&gl);
-    return TRUE;
+    return ret;
 }
 
 /**
