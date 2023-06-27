@@ -45,6 +45,7 @@ load_string_to_netplan_state(const char* yaml)
     yaml_parser_set_input_string(&parser, (const unsigned char*) yaml, strlen(yaml));
     yaml_parser_load(&parser, doc);
 
+    npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
     process_document(npp, error);
 
     if (error && *error) {

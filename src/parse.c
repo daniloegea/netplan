@@ -3270,10 +3270,6 @@ process_document(NetplanParser* npp, GError** error)
     int previously_found;
     int still_missing;
 
-    //g_assert(npp->missing_id == NULL);
-    //if (!npp->missing_id)
-    //    npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
-
     do {
         g_debug("starting new processing pass");
 
@@ -3290,34 +3286,6 @@ process_document(NetplanParser* npp, GError** error)
             break;
     } while (still_missing > 0 || npp->missing_ids_found > 0);
 
-    /* If an error already occurred we should return and not assume it's a missing interface*/
-    if (error && *error)
-        goto cleanup;
-
-    //process_missing_ids(npp, error);
-
-    return ret;
-    if (g_hash_table_size(npp->missing_id) > 0) {
-        GHashTableIter iter;
-        gpointer key, value;
-        NetplanMissingNode *missing;
-
-        g_clear_error(error);
-
-        /* Get the first missing identifier we can get from our list, to
-         * approximate early failure and give the user a meaningful error. */
-        g_hash_table_iter_init (&iter, npp->missing_id);
-        g_hash_table_iter_next (&iter, &key, &value);
-        missing = (NetplanMissingNode*) value;
-
-        ret = yaml_error(npp, missing->node, error, "%s: interface '%s' is not defined",
-                         missing->netdef_id, key);
-        goto cleanup;
-    }
-
-cleanup:
-    g_hash_table_destroy(npp->missing_id);
-    npp->missing_id = NULL;
     return ret;
 }
 
@@ -3325,6 +3293,9 @@ static gboolean
 _netplan_parser_load_single_file(NetplanParser* npp, const char *opt_filepath, yaml_document_t *doc, GError** error)
 {
     int ret = FALSE;
+
+    if (!npp->missing_id)
+        npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
 
     if (opt_filepath) {
         char* source = g_strdup(opt_filepath);

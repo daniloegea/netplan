@@ -186,6 +186,7 @@ test_netplan_parser_process_document_proper_error(void** state)
 
     load_yaml(filepath, doc, NULL);
 
+    npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
     char* source = g_strdup(filepath);
     npp->sources = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
     g_hash_table_add(npp->sources, source);
@@ -217,6 +218,7 @@ test_netplan_parser_process_document_missing_interface_error(void** state)
 
     load_yaml(filepath, doc, NULL);
 
+    npp->missing_id = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
     char* source = g_strdup(filepath);
     npp->sources = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
     g_hash_table_add(npp->sources, source);
@@ -229,9 +231,9 @@ test_netplan_parser_process_document_missing_interface_error(void** state)
     npp->current.filepath = NULL;
     g_hash_table_destroy(npp->ids_in_file);
     npp->ids_in_file = NULL;
-    netplan_parser_clear(&npp);
 
-    gboolean found = strstr(error->message, "br0: interface 'ens3' is not defined") != NULL;
+    gboolean found = g_hash_table_size(npp->missing_id) > 0;
+    netplan_parser_clear(&npp);
     netplan_error_clear(&error);
     assert_true(found);
 }
@@ -289,7 +291,7 @@ main()
            cmocka_unit_test(test_netplan_parser_interface_has_peer_netdef),
            cmocka_unit_test(test_netplan_parser_sriov_embedded_switch),
            cmocka_unit_test(test_netplan_parser_process_document_proper_error),
-           //cmocka_unit_test(test_netplan_parser_process_document_missing_interface_error),
+           cmocka_unit_test(test_netplan_parser_process_document_missing_interface_error),
            cmocka_unit_test(test_nm_device_backend_is_nm_by_default),
        };
 

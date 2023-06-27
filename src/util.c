@@ -759,9 +759,8 @@ netplan_parser_load_yaml_hierarchy(NetplanParser* npp, const char* rootdir, GErr
 
         g_set_error(error, NETPLAN_VALIDATION_ERROR, NETPLAN_ERROR_CONFIG_GENERIC,
                     "%s: Error in network definition: interface '%s' is not defined", missing->netdef_id, missing->missing);
-        goto cleanup;
+        ret = FALSE;
     }
-
 
 cleanup:
     g_hash_table_destroy(npp->missing_id);
