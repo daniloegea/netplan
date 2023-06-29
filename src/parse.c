@@ -3207,59 +3207,6 @@ static const mapping_entry_handler root_handlers[] = {
     {NULL}
 };
 
-/*
- * Post-process some specific missing interfaces that are not required
- * to exist but are needed in order to generate backend configuration.
- */
-static void
-process_missing_ids(NetplanParser* npp, GError** error)
-{
-    GHashTableIter iter;
-    gpointer key, value;
-
-    if (g_hash_table_size(npp->missing_id) == 0)
-        return;
-
-    g_hash_table_iter_init(&iter, npp->missing_id);
-
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        NetplanMissingNode* missing = (NetplanMissingNode*) value;
-        NetplanNetDefinition* netdef = g_hash_table_lookup(npp->parsed_defs, missing->netdef_id);
-        NetplanBackend backend = netdef->backend != NETPLAN_BACKEND_NONE ? netdef->backend : npp->global_backend;
-
-        /* VLAN case: NetworkManager doesn't enforce the existence of a parent interface in order to
-         * create a VLAN.
-         */
-        if (netdef->type == NETPLAN_DEF_TYPE_VLAN && backend == NETPLAN_BACKEND_NM) {
-            netdef->vlan_link = netplan_netdef_new(npp, scalar(missing->node), NETPLAN_DEF_TYPE_NM_PLACEHOLDER_, NETPLAN_BACKEND_NM);
-            g_hash_table_iter_remove(&iter);
-        }
-
-        /* BOND case: look for bond members that were missed because they showed up _after_ the bond */
-        if (netdef->type == NETPLAN_DEF_TYPE_BOND) {
-            NetplanNetDefinition* member = g_hash_table_lookup(npp->parsed_defs, missing->missing);
-
-            if (member) {
-                member->bond_link = netdef;
-                member->bond = g_strdup(netdef->id);
-                g_hash_table_iter_remove(&iter);
-            }
-        }
-
-        /* BRIDGE case: look for bridge members that were missed because they showed up _after_ the bridge */
-        if (netdef->type == NETPLAN_DEF_TYPE_BRIDGE) {
-            NetplanNetDefinition* member = g_hash_table_lookup(npp->parsed_defs, missing->missing);
-
-            if (member) {
-                member->bridge_link = netdef;
-                member->bridge = g_strdup(netdef->id);
-                g_hash_table_iter_remove(&iter);
-            }
-        }
-
-    }
-}
-
 /**
  * Handle multiple-pass parsing of the yaml document.
  */
