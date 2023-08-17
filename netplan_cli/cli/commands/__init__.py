@@ -25,6 +25,7 @@ from .set import NetplanSet
 from .get import NetplanGet
 from .sriov_rebind import NetplanSriovRebind
 from .status import NetplanStatus
+from .diff import NetplanDiff
 
 __all__ = [
     'NetplanApply',
@@ -37,4 +38,5 @@ __all__ = [
     'NetplanGet',
     'NetplanSriovRebind',
     'NetplanStatus',
+    'NetplanDiff',
 ]

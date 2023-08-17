@@ -24,7 +24,8 @@ import re
 import yaml
 
 from .. import utils
-from ..state import SystemConfigState, JSON
+from ..state import NetplanConfigState, SystemConfigState, JSON
+from ..state_diff import NetplanDiffState
 
 
 MATCH_TAGS = re.compile(r'\[([a-z0-9]+)\].*\[\/\1\]')
@@ -59,6 +60,10 @@ class NetplanStatus(utils.NetplanCommand):
                                  help='Show all interface data (incl. inactive)')
         self.parser.add_argument('-v', '--verbose', action='store_true',
                                  help='Show extra information')
+        self.parser.add_argument('-d', '--diff', action='store_true',
+                                 help='Show differences between system and netplan configuration')
+        self.parser.add_argument('-r', '--root-dir', default='/',
+                                 help='Read configuration files from this root directory instead of /')
         self.parser.add_argument('-f', '--format', default='tabular',
                                  help='Output in machine readable `json` or `yaml` format')
 
@@ -76,7 +81,7 @@ class NetplanStatus(utils.NetplanCommand):
             return print(*lst, **kwargs)
         return print(*args, **kwargs)
 
-    def pretty_print(self, data: JSON, total: int, _console_width=None) -> None:
+    def pretty_print(self, data: JSON, total: int, _console_width=None, diff_state: NetplanDiffState = None) -> None:
         if RICH_OUTPUT:
             # TODO: Use a proper (subiquity?) color palette
             theme = Theme({
@@ -97,6 +102,7 @@ class NetplanStatus(utils.NetplanCommand):
         pad = '18'
         global_state = data.get('netplan-global-state', {})
         interfaces = [(key, data[key]) for key in data if key != 'netplan-global-state']
+        full_state = diff_state.get_full_state() if diff_state else None
 
         # Global state
         pprint(('{title:>'+pad+'} {value}').format(
@@ -122,6 +128,11 @@ class NetplanStatus(utils.NetplanCommand):
                     ))
         pprint()
 
+        missing_interfaces_netplan = []
+        missing_interfaces_system = []
+        if diff_state:
+            missing_interfaces_netplan = diff_state.get_diff().get('missing_interfaces_netplan', [])
+            missing_interfaces_system = diff_state.get_diff().get('missing_interfaces_system', [])
         # Per interface
         for (ifname, data) in interfaces:
             state = data.get('operstate', 'UNKNOWN') + '/' + data.get('adminstate', 'UNKNOWN')
@@ -135,26 +146,48 @@ class NetplanStatus(utils.NetplanCommand):
             full_type = data.get('type', 'other')
             ssid = data.get('ssid')
             tunnel_mode = data.get('tunnel_mode')
+            status = ''
+            if missing_interfaces_netplan:
+                if ifname in missing_interfaces_netplan:
+                    status = ' [highlight][purple](+ missing in Netplan)[/purple][/highlight]'
             if full_type == 'wifi' and ssid:
                 full_type += ('/"' + ssid + '"')
             elif full_type == 'tunnel' and tunnel_mode:
                 full_type += ('/' + tunnel_mode)
-            pprint('[{col}]●[/{col}] {idx:>2}: {name} {type} [{col}]{state}[/{col}] ({backend}{netdef})'.format(
+            pprint('[{col}]●[/{col}] {idx:>2}: {name} {type} [{col}]{state}[/{col}] ({backend}{netdef}){status}'.format(
                 col=scolor,
                 idx=data.get('index', '?'),
                 name=ifname,
                 type=full_type,
                 state=state,
                 backend=data.get('backend', 'unmanaged'),
-                netdef=': [highlight]{}[/highlight]'.format(data.get('id')) if data.get('id') else ''
+                netdef=': [highlight]{}[/highlight]'.format(data.get('id')) if data.get('id') else '',
+                status=status
                 ))
 
             if data.get('macaddress'):
-                pprint(('{title:>'+pad+'} {mac}[muted]{vendor}[/muted]').format(
-                    title='MAC Address:',
-                    mac=data.get('macaddress', ''),
-                    vendor=' ({})'.format(data.get('vendor', '')) if data.get('vendor') else '',
-                    ))
+                netplan_missing_mac = None
+                system_missing_mac = None
+                if diff_state:
+                    if netdef_id := data.get('id'):
+                        interface_diff = diff_state.get_diff().get('interfaces', {}).get(netdef_id, {})
+                        netplan_missing_mac = interface_diff.get('netplan_state', {}).get('missing_macaddress')
+                        system_missing_mac = interface_diff.get('system_state', {}).get('missing_macaddress')
+                if netplan_missing_mac or system_missing_mac:
+                    pprint(('{title:>'+pad+'} [red]{mac} (-)[/red]').format(
+                        title='MAC Address:',
+                        mac=system_missing_mac,
+                        ))
+                    pprint(('{title:>'+pad+'} [purple]{mac} (+)[/purple]').format(
+                        title='',
+                        mac=netplan_missing_mac,
+                        ))
+                else:
+                    pprint(('{title:>'+pad+'} {mac}[muted]{vendor}[/muted]').format(
+                        title='MAC Address:',
+                        mac=data.get('macaddress', ''),
+                        vendor=' ({})'.format(data.get('vendor', '')) if data.get('vendor') else '',
+                        ))
 
             lst: list = data.get('addresses', [])
             if lst:
@@ -168,6 +201,14 @@ class NetplanStatus(utils.NetplanCommand):
                     if not flags or 'dhcp' in flags:
                         highlight_start = '[highlight]'
                         highlight_end = '[/highlight]'
+                    if diff_state:
+                        if netdef_id := data.get('id'):
+                            interface_diff = diff_state.get_diff().get('interfaces', {}).get(netdef_id)
+                            if missing_netplan := interface_diff.get('netplan_state', {}).get('missing_addresses'):
+                                prefix = extra.get('prefix', '')
+                                if f'{ip}/{prefix}' in missing_netplan:
+                                    highlight_start = highlight_start + '[purple]'
+                                    highlight_end = ' (+)[/purple]' + highlight_end
                     pprint(('{title:>'+pad+'} {start}{ip}/{prefix}{end}[muted]{extra}[/muted]').format(
                         title='Addresses:' if i == 0 else '',
                         ip=ip,
@@ -177,19 +218,82 @@ class NetplanStatus(utils.NetplanCommand):
                         end=highlight_end,
                         ))
 
+            if diff_state:
+                if netdef_id := data.get('id'):
+                    interface_diff = diff_state.get_diff().get('interfaces', {}).get(netdef_id)
+                    highlight_start = '[red]'
+                    highlight_end = ' (-)[/red]'
+                    if missing_system := interface_diff.get('system_state', {}).get('missing_addresses'):
+                        for addr in missing_system:
+                            pprint(('{title:>'+pad+'} {start}{ip}{end}').format(
+                                title='',
+                                ip=addr,
+                                start=highlight_start,
+                                end=highlight_end,
+                                ))
+                    if interface_diff.get('missing_dhcp4_address', False):
+                        highlight_start = '[red]'
+                        highlight_end = '[/red]'
+                        pprint(('{title:>'+pad+'} {start}{ip}{end}').format(
+                            title='',
+                            ip='DHCPv4: missing IP',
+                            start=highlight_start,
+                            end=highlight_end,
+                            ))
+                    if interface_diff.get('missing_dhcp6_address', False):
+                        highlight_start = '[red]'
+                        highlight_end = '[/red]'
+                        pprint(('{title:>'+pad+'} {start}{ip}{end}').format(
+                            title='',
+                            ip='DHCPv6: missing IP',
+                            start=highlight_start,
+                            end=highlight_end,
+                            ))
+
             lst = data.get('dns_addresses', [])
             if lst:
+                missing_netplan = []
+                missing_system = []
+                if diff_state:
+                    interface_diff = diff_state.get_diff().get('interfaces', {}).get(netdef_id)
+                    missing_netplan = interface_diff.get('netplan_state', {}).get('missing_nameservers', [])
+                    missing_system = interface_diff.get('system_state', {}).get('missing_nameservers', [])
+
                 for i, val in enumerate(lst):
+                    if val in missing_netplan:
+                        val = f'[highlight bold][purple]{val} (+)[/purple][/highlight bold]'
                     pprint(('{title:>'+pad+'} {value}').format(
                         title='DNS Addresses:' if i == 0 else '',
                         value=val,
                         ))
 
+                for i, val in enumerate(missing_system):
+                    val = f'[red]{val} (-)[/red]'
+                    pprint(('{title:>'+pad+'} {value}').format(
+                        title='',
+                        value=val,
+                        ))
+
             lst = data.get('dns_search', [])
             if lst:
+                missing_netplan = []
+                missing_system = []
+                if diff_state:
+                    interface_diff = diff_state.get_diff().get('interfaces', {}).get(netdef_id)
+                    missing_netplan = interface_diff.get('netplan_state', {}).get('missing_search_domains', [])
+                    missing_system = interface_diff.get('system_state', {}).get('missing_search_domains', [])
                 for i, val in enumerate(lst):
+                    if val in missing_netplan:
+                        val = f'[highlight][purple]{val} (+)[/purple][/highlight]'
                     pprint(('{title:>'+pad+'} {value}').format(
                         title='DNS Search:' if i == 0 else '',
+                        value=val,
+                        ))
+
+                for i, val in enumerate(missing_system):
+                    val = f'[red]{val} (-)[/red]'
+                    pprint(('{title:>'+pad+'} {value}').format(
+                        title='',
                         value=val,
                         ))
 
@@ -246,12 +350,26 @@ class NetplanStatus(utils.NetplanCommand):
                     ))
             pprint()
 
+        if missing_interfaces_system:
+            for ifname in sorted(missing_interfaces_system):
+                pprint('[{col}]●[/{col}] ??: {name} {type} [red][bold]MISSING[/bold][/red]'.format(
+                    col='muted',
+                    name=ifname,
+                    type=full_state.get('interfaces', {}).get(ifname, {}).get('netplan_state', {}).get('type')
+                    ))
+            pprint()
+
         hidden = total - len(interfaces)
         if (hidden > 0):
             pprint('{} inactive interfaces hidden. Use "--all" to show all.'.format(hidden))
 
     def command(self):
         state_data = SystemConfigState(self.ifname, self.all)
+
+        self.diff_data = None
+        if self.diff:
+            netplan_state = NetplanConfigState(rootdir=self.root_dir)
+            self.diff_data = NetplanDiffState(state_data, netplan_state)
 
         # Output data in requested format
         output_format = self.format.lower()
@@ -260,4 +378,4 @@ class NetplanStatus(utils.NetplanCommand):
         elif output_format == 'yaml':  # stuctural YAML output
             print(yaml.dump(state_data.get_data()))
         else:  # pretty print, human readable output
-            self.pretty_print(state_data.get_data(), state_data.number_of_interfaces)
+            self.pretty_print(state_data.get_data(), state_data.number_of_interfaces, diff_state=self.diff_data)
