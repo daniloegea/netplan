@@ -408,6 +408,20 @@ class TestRoute(TestBase):
 
         self.assertDictEqual(route.to_dict(), expected_dict)
 
+    def test_route_comparison(self):
+        route1 = NetplanRoute(to='default', via='192.168.0.1', from_addr='192.168.0.1', metric=1000)
+        # Metrics are not compared
+        route2 = NetplanRoute(to='default', via='192.168.0.1', from_addr='192.168.0.1', metric=100)
+
+        self.assertEqual(route1, route2)
+
+    def test_route_comparison_hash(self):
+        route1 = NetplanRoute(to='default', via='192.168.0.1', from_addr='192.168.0.1', metric=1000)
+        # Metrics are not compared
+        route2 = NetplanRoute(to='default', via='192.168.0.1', from_addr='192.168.0.1', metric=100)
+
+        self.assertEqual(hash(route1), hash(route2))
+
 
 class TestParser(TestBase):
     def test_load_yaml_from_fd_empty(self):

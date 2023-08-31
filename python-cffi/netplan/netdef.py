@@ -302,8 +302,7 @@ class NetplanRoute:
         return hash(
             (self.to, self.via,
              self.from_addr, self.table,
-             self.family, self.metric,
-             self.type, self.scope))
+             self.family, self.type, self.scope))
 
     def __eq__(self, route):
         return (
@@ -312,7 +311,6 @@ class NetplanRoute:
             self.from_addr == route.from_addr and
             self.table == route.table and
             self.family == route.family and
-            self.metric == route.metric and
             self.type == route.type and
             self.scope == route.scope
         )
