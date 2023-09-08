@@ -641,3 +641,31 @@ class TestNetplanDiff(unittest.TestCase):
         missing = diff_data.get('interfaces', {}).get('eth0', {}).get('netplan_state', {}).get('missing_search_domains', [])
         self.assertIn('mydomain.local', missing)
         self.assertIn('anotherdomain.local', missing)
+
+    def test_diff_macaddress(self):
+        with open(self.path, "w") as f:
+            f.write('''network:
+  ethernets:
+    eth0:
+      macaddress: aa:bb:cc:dd:ee:ff''')
+
+        netplan_state = NetplanConfigState(rootdir=self.workdir.name)
+        system_state = Mock(spec=SystemConfigState)
+
+        system_state.get_data.return_value = {
+            'netplan-global-state': {},
+            'eth0': {
+                'name': 'eth0',
+                'id': 'eth0',
+                'macaddress': '11:22:33:44:55:66'
+            }
+        }
+        system_state.interface_list = []
+
+        diff = NetplanDiffState(system_state, netplan_state)
+        diff_data = diff.get_diff()
+
+        missing_system = diff_data.get('interfaces', {}).get('eth0', {}).get('system_state', {}).get('missing_macaddress')
+        missing_netplan = diff_data.get('interfaces', {}).get('eth0', {}).get('netplan_state', {}).get('missing_macaddress')
+        self.assertEqual(missing_system, 'aa:bb:cc:dd:ee:ff')
+        self.assertEqual(missing_netplan, '11:22:33:44:55:66')
