@@ -584,3 +584,60 @@ class TestNetplanDiff(unittest.TestCase):
         missing = diff_data.get('interfaces', {}).get('eth0', {}).get('netplan_state', {}).get('missing_nameservers', [])
         self.assertIn('1.2.3.4', missing)
         self.assertIn('4.3.2.1', missing)
+
+    def test_diff_missing_system_nameservers_search(self):
+        with open(self.path, "w") as f:
+            f.write('''network:
+  ethernets:
+    eth0:
+      nameservers:
+        search:
+          - mydomain.local
+          - anotherdomain.local''')
+
+        netplan_state = NetplanConfigState(rootdir=self.workdir.name)
+        system_state = Mock(spec=SystemConfigState)
+
+        system_state.get_data.return_value = {
+            'netplan-global-state': {},
+            'eth0': {
+                'name': 'eth0',
+                'id': 'eth0',
+            }
+        }
+        system_state.interface_list = []
+
+        diff = NetplanDiffState(system_state, netplan_state)
+        diff_data = diff.get_diff()
+
+        missing = diff_data.get('interfaces', {}).get('eth0', {}).get('system_state', {}).get('missing_search_domains', [])
+        self.assertIn('mydomain.local', missing)
+        self.assertIn('anotherdomain.local', missing)
+
+    def test_diff_missing_netplan_nameservers_search(self):
+        with open(self.path, "w") as f:
+            f.write('''network:
+  ethernets:
+    eth0:
+      dhcp4: false
+      dhcp6: false''')
+
+        netplan_state = NetplanConfigState(rootdir=self.workdir.name)
+        system_state = Mock(spec=SystemConfigState)
+
+        system_state.get_data.return_value = {
+            'netplan-global-state': {},
+            'eth0': {
+                'name': 'eth0',
+                'id': 'eth0',
+                'dns_search': ['mydomain.local', 'anotherdomain.local'],
+            }
+        }
+        system_state.interface_list = []
+
+        diff = NetplanDiffState(system_state, netplan_state)
+        diff_data = diff.get_diff()
+
+        missing = diff_data.get('interfaces', {}).get('eth0', {}).get('netplan_state', {}).get('missing_search_domains', [])
+        self.assertIn('mydomain.local', missing)
+        self.assertIn('anotherdomain.local', missing)
