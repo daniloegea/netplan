@@ -83,6 +83,7 @@ class NetplanDiffState():
             iface = self._create_new_iface(netdef_id, interface)
 
             self._analyze_ip_addresses(config, iface)
+            self._analyze_nameservers(config, iface)
 
             report['interfaces'].update(iface)
 
@@ -190,6 +191,45 @@ class NetplanDiffState():
             return str(addr.ip)
         except ValueError:
             return address
+
+    def _analyze_nameservers(self, config: dict, iface: dict) -> None:
+        netdef_id = config.get('system_state', {}).get('id')
+
+        # TODO: improve analysis of configuration received from DHCP
+
+        netplan_nameservers = set(config.get('netplan_state', {}).get('nameservers', []))
+        system_nameservers = set(config.get('system_state', {}).get('nameservers', []))
+
+        # Filter out dynamically assigned DNS data
+        # Here we implement some heuristics to try to filter out dynamic DNS configuration
+        #
+        # If the nameserver address is the same as a RA route we assume it's dynamic
+        system_routes = config.get('system_state', {}).get('routes', [])
+        ra_routes = [r.via for r in system_routes if r.protocol == 'ra' and r.via]
+        system_nameservers = {ns for ns in system_nameservers if ns not in ra_routes}
+
+        # If the netplan configuration has DHCP enabled and an empty list of nameservers
+        # we assume it's dynamic
+        if not netplan_nameservers:
+            if config.get('netplan_state', {}).get('dhcp4'):
+                system_nameservers = {ns for ns in system_nameservers
+                                      if not isinstance(ipaddress.ip_address(ns), ipaddress.IPv4Address)}
+            if config.get('netplan_state', {}).get('dhcp6'):
+                system_nameservers = {ns for ns in system_nameservers
+                                      if not isinstance(ipaddress.ip_address(ns), ipaddress.IPv6Address)}
+
+        present_only_in_netplan = netplan_nameservers.difference(system_nameservers)
+        present_only_in_system = system_nameservers.difference(netplan_nameservers)
+
+        if present_only_in_system:
+            iface[netdef_id]['netplan_state'].update({
+                'missing_nameservers': list(present_only_in_system),
+            })
+
+        if present_only_in_netplan:
+            iface[netdef_id]['system_state'].update({
+                'missing_nameservers': list(present_only_in_netplan),
+            })
 
     def _analyze_missing_interfaces(self, report: dict) -> None:
         netplan_interfaces = {iface for iface in self.netplan_state.netdefs}
