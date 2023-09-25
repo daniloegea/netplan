@@ -388,6 +388,8 @@ struct netplan_net_definition {
     NetplanNetDefinition* vrf_link;
     guint vrf_table;
 
+    NetplanTristate bridge_hairpin;
+    NetplanTristate bridge_learning;
     NetplanTristate bridge_neigh_suppress;
 
     /* vxlan */

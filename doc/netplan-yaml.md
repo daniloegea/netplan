@@ -593,6 +593,18 @@ Match devices by MAC when setting options like: `wakeonlan` or `*-offload`.
   > Takes a boolean. Configures whether ARP and ND neighbor suppression is
   > enabled for this port. When unset, the kernel's default will be used.
 
+- **hairpin** (scalar) – since **???**
+
+  > Takes a boolean. Configures whether traffic may be sent back out of the
+  > port on which it was received. When this flag is false, then the bridge
+  > will not forward traffic back out of the receiving port. When unset,
+  > the kernel's default will be used.
+
+- **learning** (scalar) – since **???**
+
+  > Takes a boolean. Configures whether MAC address learning is enabled for
+  > this port. When unset, the kernel's default will be used.
+
 ## DHCP Overrides
 Several DHCP behavior overrides are available. Most currently only have any
 effect when using the `networkd` backend, with the exception of `use-routes`

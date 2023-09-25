@@ -585,6 +585,8 @@ allowed-ips=0.0.0.0/0;2001:fe:ad:de:ad:be:ef:1/24;''')})
       extensions: [group-policy, generic-protocol]
       port-range: [42, 442]
       neigh-suppress: false
+      hairpin: false
+      learning: false
   bridges:
     br0:
       interfaces: [vxlan1005]''' % {'r': self.backend})
@@ -622,6 +624,8 @@ ConfigureWithoutCarrier=yes
 Bridge=br0
 
 [Bridge]
+HairPin=false
+Learning=false
 NeighborSuppression=false\n''',
                                   'br0.network': '''[Match]
 Name=br0
@@ -642,6 +646,9 @@ type=vxlan
 interface-name=vxlan1005
 slave-type=bridge # wokeignore:rule=slave
 master=br0 # wokeignore:rule=master
+
+[bridge-port]
+hairpin-mode=false
 
 [vxlan]
 ageing=42
