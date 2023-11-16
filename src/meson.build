@@ -34,6 +34,14 @@ executable(
     dependencies: [glib, gio, yaml, uuid],
     install_dir: libexec_netplan,
     install: true)
+executable(
+    'netplan-keyfile-loader',
+    'keyfile_loader.c',
+    include_directories: inc,
+    link_with: libnetplan,
+    dependencies: [glib, gio, yaml, uuid, seccomp],
+    install_dir: get_option('sbindir'),
+    install: true)
 meson.add_install_script(meson_make_symlink,
     join_paths(get_option('prefix'), libexec_netplan, 'generate'),
     join_paths(systemd_generator_dir, 'netplan'))

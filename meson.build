@@ -14,6 +14,7 @@ gio  = dependency('gio-2.0')
 yaml = dependency('yaml-0.1')
 uuid = dependency('uuid')
 libsystemd = dependency('libsystemd')
+seccomp = dependency('libseccomp')
 
 meson_make_symlink = meson.current_source_dir() + '/tools/meson-make-symlink.sh'
 
