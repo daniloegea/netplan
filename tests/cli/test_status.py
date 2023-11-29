@@ -142,6 +142,8 @@ class TestStatus(unittest.TestCase):
         with redirect_stdout(f):
             status = NetplanStatus()
             status.verbose = False
+            status.diff = False
+            status.diff_only = False
             status.pretty_print(data, len(interfaces)+1, _console_width=130)
             out = f.getvalue()
             self.assertEqual(out, STATUS_OUTPUT)
@@ -183,6 +185,8 @@ class TestStatus(unittest.TestCase):
         with redirect_stdout(f):
             status = NetplanStatus()
             status.verbose = False
+            status.diff = False
+            status.diff_only = False
             status.pretty_print(data, len(interfaces)+1, _console_width=130)
             out = f.getvalue()
             self.assertEqual(out, STATUS_OUTPUT)
@@ -219,6 +223,8 @@ class TestStatus(unittest.TestCase):
         with redirect_stdout(f):
             status = NetplanStatus()
             status.verbose = True
+            status.diff = False
+            status.diff_only = False
             status.pretty_print(data, len(interfaces), _console_width=130)
             out = f.getvalue()
             self.assertEqual(out, '''\
