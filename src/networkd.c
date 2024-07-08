@@ -386,7 +386,7 @@ write_link_file(const NetplanNetDefinition* def, const char* rootdir, const char
         g_string_append_printf(s, "LargeReceiveOffload=%s\n",
         (def->large_receive_offload ? "true" : "false"));
 
-    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, ".link", "root", "root", 0640);
+    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, ".link", NULL, NULL, 0640);
 }
 
 STATIC gboolean
@@ -407,7 +407,7 @@ write_regdom(const NetplanNetDefinition* def, const char* rootdir, GError** erro
     g_autofree char* new_s = _netplan_scrub_systemd_unit_contents(s->str);
     g_string_free(s, TRUE);
     s = g_string_new(new_s);
-    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, "root", "root", 0640);
+    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, NULL, NULL, 0640);
     _netplan_safe_mkdir_p_dir(link);
     if (symlink(path, link) < 0 && errno != EEXIST) {
         // LCOV_EXCL_START
@@ -1154,7 +1154,7 @@ write_rules_file(const NetplanNetDefinition* def, const char* rootdir)
     g_autofree char* set_name = _netplan_scrub_string(def->set_name);
     g_string_append_printf(s, "NAME=\"%s\"\n", set_name);
 
-    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, "root", "root", 0640);
+    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, NULL, NULL, 0640);
 }
 
 STATIC gboolean
@@ -1319,6 +1319,7 @@ write_wpa_unit(const NetplanNetDefinition* def, const char* rootdir)
     g_string_append_printf(s, "Requires=sys-subsystem-net-devices-%s.device\n", stdouth);
     g_string_append_printf(s, "After=sys-subsystem-net-devices-%s.device\n", stdouth);
     g_string_append(s, "Before=network.target\nWants=network.target\n\n");
+    g_string_append(s, "After=netplan-generate.service\n\n");
     g_string_append(s, "[Service]\nType=simple\n");
     g_string_append_printf(s, "ExecStart=/sbin/wpa_supplicant -c /run/netplan/wpa-%s.conf -i%s", stdouth, stdouth);
 
@@ -1331,7 +1332,7 @@ write_wpa_unit(const NetplanNetDefinition* def, const char* rootdir)
     g_autofree char* new_s = _netplan_scrub_systemd_unit_contents(s->str);
     g_string_free(s, TRUE);
     s = g_string_new(new_s);
-    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, "root", "root", 0640);
+    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, NULL, NULL, 0640);
 }
 
 STATIC gboolean
@@ -1435,7 +1436,7 @@ write_wpa_conf(const NetplanNetDefinition* def, const char* rootdir, GError** er
     }
 
     /* use tight permissions as this contains secrets */
-    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, "root", "root", 0600);
+    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, NULL, NULL, 0600);
     return TRUE;
 }
 
@@ -1453,6 +1454,7 @@ _netplan_netdef_write_networkd(
         const NetplanNetDefinition* def,
         const char *rootdir,
         gboolean* has_been_written,
+        gboolean called_as_generator,
         GError** error)
 {
     /* TODO: make use of netplan_netdef_get_output_filename() */
@@ -1463,8 +1465,10 @@ _netplan_netdef_write_networkd(
     /* We want this for all backends when renaming, as *.link and *.rules files are
      * evaluated by udev, not networkd itself or NetworkManager. The regulatory
      * domain applies to all backends, too. */
-    write_link_file(def, rootdir, path_base);
-    write_rules_file(def, rootdir);
+    if (!called_as_generator) {
+        write_link_file(def, rootdir, path_base);
+        write_rules_file(def, rootdir);
+    }
     if (def->regulatory_domain)
         write_regdom(def, rootdir, NULL); /* overwrites global regdom */
 
@@ -1486,9 +1490,11 @@ _netplan_netdef_write_networkd(
             return FALSE;
         }
 
-        g_debug("Creating wpa_supplicant config");
-        if (!write_wpa_conf(def, rootdir, error))
-            return FALSE;
+        if (!called_as_generator) {
+            g_debug("Creating wpa_supplicant config");
+            if (!write_wpa_conf(def, rootdir, error))
+                return FALSE;
+        }
 
         g_debug("Creating wpa_supplicant unit %s", slink);
         write_wpa_unit(def, rootdir);
@@ -1514,10 +1520,12 @@ _netplan_netdef_write_networkd(
         return FALSE;
     }
 
-    if (def->type >= NETPLAN_DEF_TYPE_VIRTUAL)
-        write_netdev_file(def, rootdir, path_base);
-    if (!_netplan_netdef_write_network_file(np_state, def, rootdir, path_base, has_been_written, error))
-        return FALSE;
+    if (!called_as_generator) {
+        if (def->type >= NETPLAN_DEF_TYPE_VIRTUAL)
+            write_netdev_file(def, rootdir, path_base);
+        if (!_netplan_netdef_write_network_file(np_state, def, rootdir, path_base, has_been_written, error))
+            return FALSE;
+    }
     SET_OPT_OUT_PTR(has_been_written, TRUE);
     return TRUE;
 }
@@ -1601,7 +1609,7 @@ _netplan_networkd_write_wait_online(const NetplanState* np_state, const char* ro
     GString* content = g_string_new("[Unit]\n"
         "ConditionPathIsSymbolicLink=/run/systemd/generator/network-online.target.wants/systemd-networkd-wait-online.service\n");
     if (g_hash_table_size(non_optional_interfaces) == 0) {
-        _netplan_g_string_free_to_file_with_permissions(content, rootdir, override, NULL, "root", "root", 0640);
+        _netplan_g_string_free_to_file_with_permissions(content, rootdir, override, NULL, NULL, NULL, 0640);
         return FALSE;
     }
     // ELSE:
@@ -1645,7 +1653,7 @@ _netplan_networkd_write_wait_online(const NetplanState* np_state, const char* ro
     g_autofree char* new_content = _netplan_scrub_systemd_unit_contents(content->str);
     g_string_free(content, TRUE);
     content = g_string_new(new_content);
-    _netplan_g_string_free_to_file_with_permissions(content, rootdir, override, NULL, "root", "root", 0640);
+    _netplan_g_string_free_to_file_with_permissions(content, rootdir, override, NULL, NULL, NULL, 0640);
     return TRUE;
 }
 
@@ -1655,12 +1663,19 @@ _netplan_networkd_write_wait_online(const NetplanState* np_state, const char* ro
 void
 _netplan_networkd_cleanup(const char* rootdir)
 {
-    _netplan_unlink_glob(rootdir, "/run/systemd/network/10-netplan-*");
-    _netplan_unlink_glob(rootdir, "/run/netplan/wpa-*.conf");
     _netplan_unlink_glob(rootdir, "/run/systemd/system/systemd-networkd.service.wants/netplan-wpa-*.service");
     _netplan_unlink_glob(rootdir, "/run/systemd/system/netplan-wpa-*.service");
-    _netplan_unlink_glob(rootdir, "/run/udev/rules.d/99-netplan-*");
     _netplan_unlink_glob(rootdir, "/run/systemd/system/network.target.wants/netplan-regdom.service");
     _netplan_unlink_glob(rootdir, "/run/systemd/system/netplan-regdom.service");
     _netplan_unlink_glob(rootdir, "/run/systemd/system/systemd-networkd-wait-online.service.d/10-netplan*.conf");
+}
+
+void
+_netplan_networkd_cleanup_config(const char* rootdir)
+{
+    _netplan_unlink_glob(rootdir, "/run/systemd/network/10-netplan-*.network");
+    _netplan_unlink_glob(rootdir, "/run/systemd/network/10-netplan-*.netdev");
+    _netplan_unlink_glob(rootdir, "/run/netplan/wpa-*.conf");
+    _netplan_unlink_glob(rootdir, "/run/systemd/network/10-netplan-*.link");
+    _netplan_unlink_glob(rootdir, "/run/udev/rules.d/99-netplan-*");
 }

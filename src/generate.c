@@ -278,8 +278,13 @@ int main(int argc, char** argv)
     }
 
     /* Clean up generated config from previous runs */
-    _netplan_networkd_cleanup(rootdir);
-    _netplan_nm_cleanup(rootdir);
+    if (called_as_generator) {
+        _netplan_networkd_cleanup(rootdir);
+    } else {
+        _netplan_networkd_cleanup(rootdir);
+        _netplan_networkd_cleanup_config(rootdir);
+        _netplan_nm_cleanup(rootdir);
+    }
     _netplan_ovs_cleanup(rootdir);
     _netplan_sriov_cleanup(rootdir);
 
@@ -290,26 +295,33 @@ int main(int argc, char** argv)
         for (GList* iterator = np_state->netdefs_ordered; iterator; iterator = iterator->next) {
             NetplanNetDefinition* def = (NetplanNetDefinition*) iterator->data;
             gboolean has_been_written = FALSE;
-            CHECK_CALL(_netplan_netdef_write_networkd(np_state, def, rootdir, &has_been_written, &error), ignore_errors);
+            CHECK_CALL(_netplan_netdef_write_networkd(np_state, def, rootdir, &has_been_written, called_as_generator, &error), ignore_errors);
             any_networkd = any_networkd || has_been_written;
 
-            CHECK_CALL(_netplan_netdef_write_ovs(np_state, def, rootdir, &has_been_written, &error), ignore_errors);
-            CHECK_CALL(_netplan_netdef_write_nm(np_state, def, rootdir, &has_been_written, &error), ignore_errors);
+            CHECK_CALL(_netplan_netdef_write_ovs(np_state, def, rootdir, &has_been_written, called_as_generator, &error), ignore_errors);
+            if (!called_as_generator) {
+                CHECK_CALL(_netplan_netdef_write_nm(np_state, def, rootdir, &has_been_written, &error), ignore_errors);
+            }
             any_nm = any_nm || has_been_written;
         }
 
-        CHECK_CALL(netplan_state_finish_nm_write(np_state, rootdir, &error), ignore_errors);
+        if (!called_as_generator) {
+            CHECK_CALL(netplan_state_finish_nm_write(np_state, rootdir, &error), ignore_errors);
+        }
         CHECK_CALL(netplan_state_finish_sriov_write(np_state, rootdir, &error), ignore_errors);
     }
 
     /* Disable /usr/lib/NetworkManager/conf.d/10-globally-managed-devices.conf
      * (which restricts NM to wifi and wwan) if "renderer: NetworkManager" is used anywhere */
-    if (netplan_state_get_backend(np_state) == NETPLAN_BACKEND_NM || any_nm)
-        _netplan_g_string_free_to_file(g_string_new(NULL), rootdir, "/run/NetworkManager/conf.d/10-globally-managed-devices.conf", NULL);
-
+    if (!called_as_generator) {
+        if (netplan_state_get_backend(np_state) == NETPLAN_BACKEND_NM || any_nm)
+            _netplan_g_string_free_to_file(g_string_new(NULL), rootdir, "/run/NetworkManager/conf.d/10-globally-managed-devices.conf", NULL);
+    }
     gboolean enable_wait_online = FALSE;
     if (any_networkd)
         enable_wait_online = _netplan_networkd_write_wait_online(np_state, rootdir);
+
+    CHECK_CALL(_write_netplan_generate_systemd_unit(rootdir, &error), ignore_errors);
 
     if (called_as_generator) {
         /* Ensure networkd starts if we have any configuration for it */

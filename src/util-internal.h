@@ -220,3 +220,6 @@ _netplan_scrub_string(const char* content);
 
 gchar*
 _netplan_scrub_systemd_unit_contents(const char* content);
+
+NETPLAN_INTERNAL gboolean
+_write_netplan_generate_systemd_unit(const char* rootdir, GError** error);

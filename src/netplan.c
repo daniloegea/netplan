@@ -1294,3 +1294,34 @@ cleanup:
     g_hash_table_destroy(perfile_netdefs);
     return ret;
 }
+
+gboolean
+_write_netplan_generate_systemd_unit(const char* rootdir, GError** error)
+{
+    g_autofree gchar* id_escaped = NULL;
+    g_autofree char* link = g_strjoin(NULL, rootdir ?: "", "/run/systemd/system/multi-user.target.wants/netplan-generate.service", NULL);
+    g_autofree char* path = g_strjoin(NULL, "/run/systemd/system/netplan-generate.service", NULL);
+
+    GString* s = g_string_new("[Unit]\n");
+    g_string_append(s, "Description=Netplan generate\n");
+    g_string_append(s, "DefaultDependencies=no\n");
+    g_string_append(s, "Before=network-pre.target\n");
+
+    g_string_append(s, "\n[Service]\nType=oneshot\n");
+    g_string_append_printf(s, "ExecStart=/usr/libexec/netplan/generate\n");
+
+    g_autofree char* new_s = _netplan_scrub_systemd_unit_contents(s->str);
+    g_string_free(s, TRUE);
+    s = g_string_new(new_s);
+    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, NULL, NULL, 0640);
+
+    _netplan_safe_mkdir_p_dir(link);
+    if (symlink(path, link) < 0 && errno != EEXIST) {
+        // LCOV_EXCL_START
+        g_set_error(error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
+                    "failed to create enablement symlink: %m");
+        return FALSE;
+        // LCOV_EXCL_STOP
+    }
+    return TRUE;
+}

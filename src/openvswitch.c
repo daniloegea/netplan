@@ -69,7 +69,7 @@ write_ovs_systemd_unit(const char* id, const GString* cmds, const char* rootdir,
     g_autofree char* new_s = _netplan_scrub_systemd_unit_contents(s->str);
     g_string_free(s, TRUE);
     s = g_string_new(new_s);
-    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, "root", "root", 0640);
+    _netplan_g_string_free_to_file_with_permissions(s, rootdir, path, NULL, NULL, NULL, 0640);
 
     _netplan_safe_mkdir_p_dir(link);
     if (symlink(path, link) < 0 && errno != EEXIST) {
@@ -322,7 +322,13 @@ cleanup:
  *           (useful for testing).
  */
 gboolean
-_netplan_netdef_write_ovs(const NetplanState* np_state, const NetplanNetDefinition* def, const char* rootdir, gboolean* has_been_written, GError** error)
+_netplan_netdef_write_ovs(
+    const NetplanState* np_state,
+    const NetplanNetDefinition* def,
+    const char* rootdir,
+    gboolean* has_been_written, 
+    gboolean called_as_generator,
+    GError** error)
 {
     g_autoptr(GString) cmds = g_string_new(NULL);
     gchar* dependency = NULL;
@@ -419,9 +425,11 @@ _netplan_netdef_write_ovs(const NetplanState* np_state, const NetplanNetDefiniti
 
         /* Try writing out a base config */
         /* TODO: make use of netplan_netdef_get_output_filename() */
-        base_config_path = g_strjoin(NULL, "run/systemd/network/10-netplan-", escaped_netdef_id, NULL);
-        if (!_netplan_netdef_write_network_file(np_state, def, rootdir, base_config_path, has_been_written, error))
-            return FALSE;
+        if (!called_as_generator) {
+            base_config_path = g_strjoin(NULL, "run/systemd/network/10-netplan-", escaped_netdef_id, NULL);
+            if (!_netplan_netdef_write_network_file(np_state, def, rootdir, base_config_path, has_been_written, error))
+                return FALSE;
+        }
     } else {
         /* Other interfaces must be part of an OVS bridge or bond to carry additional data */
         if (   (def->ovs_settings.external_ids && g_hash_table_size(def->ovs_settings.external_ids) > 0)

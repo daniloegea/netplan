@@ -117,18 +117,20 @@ void _netplan_g_string_free_to_file_with_permissions(GString* s, const char* roo
      * It's OK to fail to set the owners and mode as this code will be called from unit tests.
      * The autopkgtests will check if the owner/group and mode are correctly set.
      */
-    pw = getpwnam(owner);
-    if (!pw) {
-        g_debug("Failed to determine the UID of user %s: %s", owner, strerror(errno)); // LCOV_EXCL_LINE
-    }
-    gr = getgrnam(group);
-    if (!gr) {
-        g_debug("Failed to determine the GID of group %s: %s", group, strerror(errno)); // LCOV_EXCL_LINE
-    }
-    if (pw && gr) {
-        ret = chown(full_path, pw->pw_uid, gr->gr_gid);
-        if (ret != 0) {
-            g_debug("Failed to set owner and group for file %s: %s", full_path, strerror(errno));
+    if (owner && group) {
+        pw = getpwnam(owner);
+        if (!pw) {
+            g_debug("Failed to determine the UID of user %s: %s", owner, strerror(errno)); // LCOV_EXCL_LINE
+        }
+        gr = getgrnam(group);
+        if (!gr) {
+            g_debug("Failed to determine the GID of group %s: %s", group, strerror(errno)); // LCOV_EXCL_LINE
+        }
+        if (pw && gr) {
+            ret = chown(full_path, pw->pw_uid, gr->gr_gid);
+            if (ret != 0) {
+                g_debug("Failed to set owner and group for file %s: %s", full_path, strerror(errno));
+            }
         }
     }
 }

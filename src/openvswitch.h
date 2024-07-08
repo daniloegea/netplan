@@ -25,6 +25,7 @@ _netplan_netdef_write_ovs(
         const NetplanNetDefinition* netdef,
         const char* rootdir,
         gboolean* has_been_written,
+        gboolean called_as_generator,
         GError** error);
 
 NETPLAN_INTERNAL gboolean
