@@ -1309,6 +1309,7 @@ _write_netplan_generate_systemd_unit(const char* rootdir, GError** error)
 
     g_string_append(s, "\n[Service]\nType=oneshot\n");
     g_string_append_printf(s, "ExecStart=/usr/libexec/netplan/generate\n");
+    g_string_append_printf(s, "ExecStart=systemctl daemon-reload\n");
 
     g_autofree char* new_s = _netplan_scrub_systemd_unit_contents(s->str);
     g_string_free(s, TRUE);

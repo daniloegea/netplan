@@ -1392,6 +1392,7 @@ ExecStart=/usr/sbin/netplan rebind --debug engreen enblue
 Description=Apply SR-IOV configuration
 DefaultDependencies=no
 Before=network-pre.target
+After=netplan-generate.service
 After=sys-subsystem-net-devices-engreen.device
 After=sys-subsystem-net-devices-enblue.device
 
@@ -1420,6 +1421,7 @@ ExecStart=/usr/sbin/netplan rebind --debug engreen
 Description=Apply SR-IOV configuration
 DefaultDependencies=no
 Before=network-pre.target
+After=netplan-generate.service
 After=sys-subsystem-net-devices-engreen.device
 
 [Service]
@@ -1466,6 +1468,7 @@ ExecStart=/usr/sbin/netplan rebind --debug engreen enblue
 Description=Apply SR-IOV configuration
 DefaultDependencies=no
 Before=network-pre.target
+After=netplan-generate.service
 After=sys-subsystem-net-devices-engreen.device
 After=sys-subsystem-net-devices-enblue.device
 
@@ -1506,6 +1509,7 @@ ExecStart=/usr/sbin/netplan rebind --debug engreen ;en \\; a\\t;\\tb ;\\tc\\t; d
 Description=Apply SR-IOV configuration
 DefaultDependencies=no
 Before=network-pre.target
+After=netplan-generate.service
 After=sys-subsystem-net-devices-engreen.device
 After=sys-subsystem-net-devices-;en \\; a\\t;\\tb ;\\tc\\t; d; \\n;\\nabc.device
 
@@ -1527,6 +1531,7 @@ ExecStart=/usr/sbin/netplan apply --sriov-only
 Description=Apply SR-IOV configuration
 DefaultDependencies=no
 Before=network-pre.target
+After=netplan-generate.service
 After=sys-subsystem-net-devices-engreen.device
 
 [Service]
@@ -1548,6 +1553,7 @@ ExecStart=/usr/sbin/netplan apply --sriov-only
 Description=Apply SR-IOV configuration
 DefaultDependencies=no
 Before=network-pre.target
+After=netplan-generate.service
 
 [Service]
 Type=oneshot

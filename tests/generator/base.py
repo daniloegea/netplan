@@ -95,6 +95,7 @@ Requires=sys-subsystem-net-devices-%(iface)s.device
 After=sys-subsystem-net-devices-%(iface)s.device
 Before=network.target
 Wants=network.target
+After=netplan-generate.service
 
 [Service]
 Type=simple
@@ -477,6 +478,11 @@ class TestBase(unittest.TestCase):
         self.assertEqual(set(os.listdir(self.workdir.name)) - {'lib'}, {'etc', 'run'})
         ovs_systemd_dir = set(os.listdir(systemd_dir))
         ovs_systemd_dir.remove('systemd-networkd.service.wants')
+        try:
+            ovs_systemd_dir.remove('multi-user.target.wants')
+            ovs_systemd_dir.remove('netplan-generate.service')
+        except Exception:
+            pass
         if 'systemd-networkd-wait-online.service.d' in ovs_systemd_dir:
             ovs_systemd_dir.remove('systemd-networkd-wait-online.service.d')
         self.assertEqual(ovs_systemd_dir, {'netplan-ovs-' + f for f in file_contents_map})

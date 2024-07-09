@@ -177,17 +177,13 @@ class TestConfigArgs(TestBase):
         out = subprocess.check_output([generator, '--root-dir', self.workdir.name, outdir, outdir, outdir],
                                       stderr=subprocess.STDOUT, text=True, env=local_env)
         n = os.path.join(self.workdir.name, 'run', 'systemd', 'network', '10-netplan-eth99.network')
-        self.assertTrue(os.path.exists(n))
-        os.unlink(n)
+        self.assertFalse(os.path.exists(n))
         n = os.path.join(self.workdir.name, 'run', 'systemd', 'network', '10-netplan-eth98.network')
-        self.assertTrue(os.path.exists(n))
-        os.unlink(n)
+        self.assertFalse(os.path.exists(n))
         n = os.path.join(self.workdir.name, 'run', 'systemd', 'network', '10-netplan-lo.network')
-        self.assertTrue(os.path.exists(n))
-        os.unlink(n)
+        self.assertFalse(os.path.exists(n))
         n = os.path.join(self.workdir.name, 'run', 'systemd', 'network', '10-netplan-bond0.network')
-        self.assertTrue(os.path.exists(n))
-        os.unlink(n)
+        self.assertFalse(os.path.exists(n))
 
         # check log message about bonds wait-online
         self.assertIn('Not all bond members need to be connected for bond0 to be ready.', out)
@@ -224,7 +220,7 @@ ExecStart=/lib/systemd/systemd-networkd-wait-online --any -o routable -i eth99.4
         # existing enablement symlink
         os.unlink(os.path.join(outdir, 'netplan.stamp'))
         subprocess.check_output([generator, '--root-dir', self.workdir.name, outdir, outdir, outdir])
-        self.assertTrue(os.path.exists(n))
+        self.assertFalse(os.path.exists(n))
 
     def test_systemd_generator_all_optional(self):
         conf = os.path.join(self.confdir, 'a.yaml')
@@ -245,8 +241,7 @@ ExecStart=/lib/systemd/systemd-networkd-wait-online --any -o routable -i eth99.4
 
         subprocess.check_call([generator, '--root-dir', self.workdir.name, outdir, outdir, outdir])
         n = os.path.join(self.workdir.name, 'run', 'systemd', 'network', '10-netplan-eth0.network')
-        self.assertTrue(os.path.exists(n))
-        os.unlink(n)
+        self.assertFalse(os.path.exists(n))
 
         # should auto-enable networkd but not -wait-online
         service_dir = os.path.join(self.workdir.name, 'run', 'systemd', 'system')
@@ -313,8 +308,7 @@ ExecStart=/lib/systemd/systemd-networkd-wait-online -i eth99.44:degraded
 
         subprocess.check_call([generator, '--root-dir', self.workdir.name, outdir, outdir, outdir])
         n = os.path.join(self.workdir.name, 'run', 'systemd', 'network', '10-netplan-br0.network')
-        self.assertTrue(os.path.exists(n))
-        os.unlink(n)
+        self.assertFalse(os.path.exists(n))
 
         service_dir = os.path.join(self.workdir.name, 'run', 'systemd', 'system')
         override = os.path.join(service_dir, 'systemd-networkd-wait-online.service.d', '10-netplan.conf')
@@ -380,8 +374,7 @@ ExecStart=/lib/systemd/systemd-networkd-wait-online --any -o routable -i br0
 
         subprocess.check_call([generator, '--root-dir', self.workdir.name, outdir, outdir, outdir])
         n = os.path.join(self.workdir.name, 'run', 'systemd', 'network', '10-netplan-lo.network')
-        self.assertTrue(os.path.exists(n))
-        os.unlink(n)
+        self.assertFalse(os.path.exists(n))
 
         # should auto-enable networkd and -wait-online
         service_dir = os.path.join(self.workdir.name, 'run', 'systemd', 'system')
@@ -411,4 +404,4 @@ ExecStart=/lib/systemd/systemd-networkd-wait-online --any -o routable -i a \\; b
         # existing enablement symlink
         os.unlink(os.path.join(outdir, 'netplan.stamp'))
         subprocess.check_output([generator, '--root-dir', self.workdir.name, outdir, outdir, outdir])
-        self.assertTrue(os.path.exists(n))
+        self.assertFalse(os.path.exists(n))

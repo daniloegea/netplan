@@ -1318,7 +1318,7 @@ write_wpa_unit(const NetplanNetDefinition* def, const char* rootdir)
     g_string_append(s, "DefaultDependencies=no\n");
     g_string_append_printf(s, "Requires=sys-subsystem-net-devices-%s.device\n", stdouth);
     g_string_append_printf(s, "After=sys-subsystem-net-devices-%s.device\n", stdouth);
-    g_string_append(s, "Before=network.target\nWants=network.target\n\n");
+    g_string_append(s, "Before=network.target\nWants=network.target\n");
     g_string_append(s, "After=netplan-generate.service\n\n");
     g_string_append(s, "[Service]\nType=simple\n");
     g_string_append_printf(s, "ExecStart=/sbin/wpa_supplicant -c /run/netplan/wpa-%s.conf -i%s", stdouth, stdouth);
