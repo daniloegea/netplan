@@ -91,6 +91,17 @@ def nm_get_connection_for_interface(interface: str) -> str:
     return connection if connection != '--' else ''
 
 
+def nm_is_software_interface(interface: str) -> bool:
+    output = nmcli_out(['-m', 'tabular', '-f', 'GENERAL.IS-SOFTWARE', 'device', 'show', interface])
+    lines = output.strip().split('\n')
+    return True if lines[1] == 'yes' else False
+
+
+def ip_link_del(iface: str):
+    '''Delete an interface via iproute2'''
+    subprocess.check_call(['ip', 'link', 'del', 'dev', iface], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
 def nm_bring_interface_up(connection: str) -> None:  # pragma: nocover (must be covered by NM autopkgtests)
     try:
         nmcli(['connection', 'up', connection])

@@ -194,6 +194,8 @@ class NetplanApply(utils.NetplanCommand):
                     # ignore failures here -- some/many devices might not be managed by NM
                     try:
                         utils.nmcli(['device', 'disconnect', device])
+                        if utils.nm_is_software_interface(device):
+                            utils.ip_link_del(device)
                     except subprocess.CalledProcessError:
                         pass
 
